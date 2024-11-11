@@ -1,6 +1,5 @@
-import "./general.css";
-import { useState, useEffect } from "react";
-import { db } from "../firebase-config";
+import React, { useState, useEffect } from 'react'
+import { db } from "../firebase-config"
 import {
   collection,
   getDocs,
@@ -8,199 +7,182 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-} from "firebase/firestore";
+} from "firebase/firestore"
+import './repuestos.css'
 
-const Repuestos = () => {
-  const [newCodigo, setNewCodigo] = useState("");
-  const [newDescipcion, setNewDescripcion] = useState("");
+export default function Repuestos() {
+  const [newCodigo, setNewCodigo] = useState("")
+  const [newDescripcion, setNewDescripcion] = useState("")
   const [newCantDisp, setNewCantDisp] = useState(0)
   const [newNumeroEstanteria, setNewNumEstanteria] = useState("")
   const [newNumeroEstante, setNewNumeroEstante] = useState("")
   const [newNumeroBIN, setNewNumeroBIN] = useState("")
   const [newPosicionBIN, setNewPosicionBIN] = useState("")
 
-  const [repuestos, setRepuestos] = useState([]);
-  const repuestosCollectionRef = collection(db, 'repuestos');
-  const [editingCell, setEditingCell] = useState(null);
-
+  const [repuestos, setRepuestos] = useState([])
+  const repuestosCollectionRef = collection(db, 'repuestos')
+  const [editingCell, setEditingCell] = useState(null)
+  const [showNewRepuestoForm, setShowNewRepuestoForm] = useState(false)
 
   const createRepuesto = async () => {
     await addDoc(repuestosCollectionRef, {
       codigo: newCodigo,
-      descripcion: newDescipcion,
+      descripcion: newDescripcion,
       cantidad_disponible: Number(newCantDisp),
       numero_estanteria: newNumeroEstanteria,
       numero_estante: newNumeroEstante,
       numero_BIN: newNumeroBIN,
       posicion_BIN: newPosicionBIN
-    });
+    })
 
     setRepuestos((prevRepuestos) => [
       ...prevRepuestos,
       {
         id: repuestosCollectionRef.id,
         codigo: newCodigo,
-        descripcion: newDescipcion,
+        descripcion: newDescripcion,
         cantidad_disponible: Number(newCantDisp),
         numero_estanteria: newNumeroEstanteria,
         numero_estante: newNumeroEstante,
         numero_BIN: newNumeroBIN,
         posicion_BIN: newPosicionBIN
       },
-    ]);
+    ])
 
-  };
+    setShowNewRepuestoForm(false)
+  }
 
   const updateRepuesto = async (id, field, value) => {
-    const repuestoDoc = doc(db, "repuestos", id);
-    await updateDoc(repuestoDoc, { [field]: value });
+    const repuestoDoc = doc(db, "repuestos", id)
+    await updateDoc(repuestoDoc, { [field]: value })
 
     setRepuestos((prevRepuestos) =>
       prevRepuestos.map((repuesto) =>
         repuesto.id === id ? { ...repuesto, [field]: value } : repuesto
       )
-    );
-
-  };
+    )
+  }
 
   const deleteRepuesto = async (id) => {
-    const userDoc = doc(db, "repuestos", id);
-    await deleteDoc(userDoc);
+    const userDoc = doc(db, "repuestos", id)
+    await deleteDoc(userDoc)
 
-    setRepuestos((prevRepuestos) => prevRepuestos.filter((repuesto) => repuesto.id !== id));
-
-  };
+    setRepuestos((prevRepuestos) => prevRepuestos.filter((repuesto) => repuesto.id !== id))
+  }
 
   useEffect(() => {
     const getRepuestos = async () => {
-      const data = await getDocs(repuestosCollectionRef);
-      setRepuestos(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
-    };
+      const data = await getDocs(repuestosCollectionRef)
+      setRepuestos(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })))
+    }
 
-    getRepuestos();
-  }, []);
+    getRepuestos()
+  }, [])
 
   const makeEditable = (repuestoId, field, initialValue) => {
     return (
       <input
         type="text"
+        className="input"
         defaultValue={initialValue}
         onBlur={(e) => {
-          updateRepuesto(repuestoId, field, e.target.value);
-          setEditingCell(null);  // Esto hace que el campo de edición desaparezca al perder el foco
+          updateRepuesto(repuestoId, field, e.target.value)
+          setEditingCell(null)
         }}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
-            updateRepuesto(repuestoId, field, e.target.value);
-            setEditingCell(null);  // Esto hace que el campo de edición desaparezca al presionar Enter
+            updateRepuesto(repuestoId, field, e.target.value)
+            setEditingCell(null)
           }
         }}
         autoFocus
       />
-    );
-  };
+    )
+  }
 
   return (
-    <div className="Repuestos">
-      <body>
-        <header>
-          <nav>
-            <ul>
-              <li><a href="/Repuestos">Buscar Componentes Electrónicos</a></li>
-              <li><a href="/Home">Revisar Dispositivos Electrónicos por Entregar</a></li>
-            </ul>
-          </nav>
-        </header>
-        <main>
-          <tablex>
-            <input
-              placeholder="Codigo..."
-              onChange={(event) => {
-                setNewCodigo(event.target.value);
-              }}
-            />
-            <input
-              placeholder="Descripcion..."
-              onChange={(event) => {
-                setNewDescripcion(event.target.value);
-              }}
-            />
-            <input
-              type="number"
-              placeholder="Cantidad disponible..."
-              onChange={(event) => {
-                setNewCantDisp(event.target.value);
-              }}
-            />
-            <input
-              placeholder="Numero estanteria..."
-              onChange={(event) => {
-                setNewNumEstanteria(event.target.value);
-              }}
-            />
-            <input
-              placeholder="Numero estante..."
-              onChange={(event) => {
-                setNewNumeroEstante(event.target.value);
-              }}
-            />
-            <input
-              placeholder="Numero BIN..."
-              onChange={(event) => {
-                setNewNumeroBIN(event.target.value);
-              }}
-            />
-            <input
-              placeholder="Posiciason BIN..."
-              onChange={(event) => {
-                setNewPosicionBIN(event.target.value);
-              }}
-            />
-            <button onClick={createRepuesto}> Crear repuesto</button>
-          </tablex>
-          <h2>Lista de repuestos</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Codigo</th>
-                <th>Descripcion</th>
-                <th>Cantidad disponible</th>
-                <th>Numero estanteria</th>
-                <th>Numero estante</th>
-                <th>Numero BIN</th>
-                <th>Posicion BIN</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-          </table>
-          {repuestos.map((repuestos) => {
-            return (
-              <div>
-                <table>
-                  <tbody>
-                    <tr key={repuestos.id}>
+    <div className="min-h-screen">
+      <header className="header">
+        <nav className="nav">
+          <ul>
+            <li>
+              <a href="/Repuestos" className="nav-link">
+                Buscar Componentes Electrónicos
+              </a>
+            </li>
+            <li>
+              <a href="/Home" className="nav-link">
+                Revisar Dispositivos Electrónicos por Entregar
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </header>
+      <main className="main-content">
+        <div className="card">
+          <div className="card-header">
+            <h2 className="card-title">Gestión de Repuestos</h2>
+          </div>
+          <div className="card-content">
+            <button className="button" onClick={() => setShowNewRepuestoForm(!showNewRepuestoForm)}>
+              {showNewRepuestoForm ? 'Cancelar' : 'Crear Nuevo Repuesto'}
+            </button>
+            {showNewRepuestoForm && (
+              <div className="form-grid">
+                <input className="input" placeholder="Codigo..." onChange={(e) => setNewCodigo(e.target.value)} />
+                <input className="input" placeholder="Descripcion..." onChange={(e) => setNewDescripcion(e.target.value)} />
+                <input className="input" type="number" placeholder="Cantidad disponible..." onChange={(e) => setNewCantDisp(e.target.value)} />
+                <input className="input" placeholder="Numero estanteria..." onChange={(e) => setNewNumEstanteria(e.target.value)} />
+                <input className="input" placeholder="Numero estante..." onChange={(e) => setNewNumeroEstante(e.target.value)} />
+                <input className="input" placeholder="Numero BIN..." onChange={(e) => setNewNumeroBIN(e.target.value)} />
+                <input className="input" placeholder="Posicion BIN..." onChange={(e) => setNewPosicionBIN(e.target.value)} />
+                <button className="button" onClick={createRepuesto}>Crear Repuesto</button>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-header">
+            <h2 className="card-title">Lista de Repuestos</h2>
+          </div>
+          <div className="card-content">
+            <div className="table-container">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Codigo</th>
+                    <th>Descripcion</th>
+                    <th>Cantidad disponible</th>
+                    <th>Numero estanteria</th>
+                    <th>Numero estante</th>
+                    <th>Numero BIN</th>
+                    <th>Posicion BIN</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {repuestos.map((repuesto) => (
+                    <tr key={repuesto.id}>
                       {["codigo", "descripcion", "cantidad_disponible", "numero_estanteria", "numero_estante", "numero_BIN", "posicion_BIN"].map((field) => (
-                        <td key={field} onDoubleClick={() => setEditingCell({ id: repuestos.id, field })}>
-                          {editingCell?.id === repuestos.id && editingCell.field === field
-                            ? makeEditable(repuestos.id, field, repuestos[field])
-                            : repuestos[field]}
+                        <td key={field} onDoubleClick={() => setEditingCell({ id: repuesto.id, field })}>
+                          {editingCell?.id === repuesto.id && editingCell.field === field
+                            ? makeEditable(repuesto.id, field, repuesto[field])
+                            : repuesto[field]}
                         </td>
                       ))}
                       <td>
-                        <buttona onClick={() => { deleteRepuesto(repuestos.id); }}> Eliminar repuesto </buttona>
+                        <button className="button button-destructive" onClick={() => deleteRepuesto(repuesto.id)}>Eliminar</button>
                       </td>
                     </tr>
-                  </tbody>
-                </table>
-              </div>
-            );
-          }
-          )
-          }
-        </main>
-      </body>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
-  );
+  )
 }
 
 export default Repuestos;
