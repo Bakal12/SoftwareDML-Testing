@@ -184,5 +184,3 @@ export default function Repuestos() {
     </div>
   )
 }
-
-export default Repuestos;
