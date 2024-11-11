@@ -33,23 +33,46 @@ const Login = () => {
   };
 
   return (
-    <div className="login">
-      <form onSubmit={handleLogin}>
-        <input
-          type="email"
-          placeholder="email"
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          type="password"
-          placeholder="password"
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button type="submit">Login</button>
-        {error && <span>Wrong email or password!</span>}
-      </form>
-    </div>
-  );
+      <div className="login-container">
+        <div className="login-form">
+          <h2 className="login-title">Inicia sesion con tu cuenta</h2>
+          <form onSubmit={handleLogin}>
+            <div className="input-group">
+              <label htmlFor="email" className="input-label">
+                Correo elecrtónico
+              </label>
+              <input
+                id="email"
+                type="email"
+                className="input-field"
+                placeholder="Correo electrónico"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="input-group">
+              <label htmlFor="password" className="input-label">
+                Contraseña
+              </label>
+              <input
+                id="password"
+                type="password"
+                className="input-field"
+                placeholder="Contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <button type="submit" className="submit-button">
+              Iniciar sesion
+            </button>
+          </form>
+          {error && <div className="error-message">{error}</div>}
+        </div>
+      </div>
+    );
 };
 
 export default Login;
