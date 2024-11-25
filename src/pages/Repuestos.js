@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { db } from "../firebase-config"
+import { Pagination } from '@mui/material';
 import {
   collection,
   getDocs,
@@ -9,6 +10,7 @@ import {
   doc,
   query,
   orderBy,
+  limit,
 } from "firebase/firestore"
 import './repuestos.css'
 
@@ -43,6 +45,15 @@ export default function Repuestos() {
   const repuestosCollectionRef = collection(db, 'repuestos')
   const [editingCell, setEditingCell] = useState(null)
   const [showNewRepuestoForm, setShowNewRepuestoForm] = useState(false)
+
+  const [allRepuestos, setAllRepuestos] = useState([]); // Todos los registros
+  const [displayedRepuestos, setDisplayedRepuestos] = useState([]); // Registros actuales en pantalla
+  const [limit, setLimit] = useState(5); // Límite por página
+  const [currentPage, setCurrentPage] = useState(1); // Página actual
+  //const [lastVisibleDocs, setLastVisibleDocs] = useState([]); // Referencias de las páginas
+  const [totalPages, setTotalPages] = useState(1); // Total de páginas
+  const [isLoading, setIsLoading] = useState(true); // Estado de carga
+
 
   const isOnline = useNetworkStatus();
 
@@ -92,29 +103,36 @@ export default function Repuestos() {
     setRepuestos((prevRepuestos) => prevRepuestos.filter((repuesto) => repuesto.id !== id))
   }
 
+  // Obtener todos los registros al cargar el componente
   useEffect(() => {
-    const getRepuestos = async () => {
-      const repuestosQuery = query(repuestosCollectionRef, orderBy("codigo", "asc"));
+    const fetchAllRepuestos = async () => {
+      setIsLoading(true); // Inicia la carga
       try {
-        // Intenta cargar desde la caché primero
-        const data = await getDocs(repuestosQuery, { source: "cache" });
+        const data = await getDocs(query(repuestosCollectionRef, orderBy("codigo", "asc")));
+        const repuestos = data.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
+        setAllRepuestos(repuestos); // Guardar todos los registros
+        setTotalPages(Math.ceil(repuestos.length / limit)); // Calcular el número total de páginas
+        setDisplayedRepuestos(repuestos.slice(0, limit)); // Mostrar la primera página
+
         setRepuestos(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
 
-        console.log("Datos cargados desde la caché.");
 
-      } catch (cacheError) {
-        // Si la caché falla, intenta desde el servidor
-        console.warn("No se pudo cargar desde la caché. Intentando desde el servidor...", cacheError);
-
-        const serverData = await getDocs(repuestosQuery, { source: "server" });
-        setRepuestos(serverData.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
-
-        console.log("Datos cargados desde el servidor.");
+      } catch (error) {
+        console.error("Error al cargar los datos:", error);
+      } finally {
+        setIsLoading(false); // Finaliza la carga
       }
     };
 
-    getRepuestos();
-  }, [])
+    fetchAllRepuestos();
+  }, [limit]);
+
+  // Actualizar los registros mostrados cuando cambie la página o el límite
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * limit;
+    const endIndex = startIndex + limit;
+    setDisplayedRepuestos(allRepuestos.slice(startIndex, endIndex)); // Mostrar los registros de la página actual
+  }, [currentPage, limit, allRepuestos]);
 
   const makeEditable = (repuestoId, field, initialValue) => {
     return (
@@ -181,6 +199,22 @@ export default function Repuestos() {
         </div>
         <div className="card">
           <div className="card-header">
+              {/* Selector de límite */}
+              <label htmlFor="limit">Resultados por página: </label>
+              <select
+                id="limit"
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setCurrentPage(1); // Reiniciar a la página 1 al cambiar el límite
+                }}
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
             <h2 className="card-title">Lista de Repuestos</h2>
           </div>
           <div className="card-content">
@@ -199,7 +233,7 @@ export default function Repuestos() {
                   </tr>
                 </thead>
                 <tbody>
-                  {repuestos.map((repuesto) => (
+                  {displayedRepuestos.map((repuesto) => (
                     <tr key={repuesto.id}>
                       {["codigo", "descripcion", "cantidad_disponible", "numero_estanteria", "numero_estante", "numero_BIN", "posicion_BIN"].map((field) => (
                         <td key={field} onDoubleClick={() => setEditingCell({ id: repuesto.id, field })}>
@@ -215,6 +249,18 @@ export default function Repuestos() {
                   ))}
                 </tbody>
               </table>
+              {/* Paginación */}
+              <div style={{ marginTop: "20px", display: "flex", justifyContent: "center" }}>
+                <Pagination
+                  count={totalPages} // Número total de páginas
+                  page={currentPage} // Página actual
+                  onChange={(event, value) => setCurrentPage(value)} // Cambiar página
+                  color="primary"
+                  disabled={isLoading} // Deshabilitar mientras los datos cargan
+                />
+              </div>
+              {/* Indicador de carga */}
+              {isLoading && <p>Cargando...</p>}
             </div>
           </div>
         </div>
@@ -222,4 +268,5 @@ export default function Repuestos() {
     </div>
   )
 }
+
 
