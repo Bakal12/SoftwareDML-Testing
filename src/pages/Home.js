@@ -1,5 +1,5 @@
 import "./home.css";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { db } from "../firebase-config";
 import { query, orderBy } from "firebase/firestore";
 import {
@@ -37,6 +37,11 @@ const Home = () => {
   const fichaCollectionRef = collection(db, 'ficha');
   const [editingCell, setEditingCell] = useState(null);
   const [showNewFichaForm, setShowNewFichaForm] = useState(false);
+
+  const autoResize = (textarea) => {
+    textarea.style.height = "auto"; // Restablecer altura
+    textarea.style.height = `${textarea.scrollHeight}px`; // Ajustar a la altura del contenido
+  };
 
 
   const exportToExcel = async (fichaData) => {
@@ -128,7 +133,7 @@ const Home = () => {
 
   useEffect(() => {
     const getFicha = async () => {
-      const fichaQuery = query (fichaCollectionRef, orderBy("item", "asc"));
+      const fichaQuery = query(fichaCollectionRef, orderBy("item", "asc"));
       try {
         // Intenta cargar desde la caché primero
         const data = await getDocs(fichaQuery, { source: "cache" });
@@ -148,12 +153,14 @@ const Home = () => {
     };
 
     getFicha();
-  }, [])
+  })
 
   const makeEditable = (fichaId, field, initialValue) => {
     return (
-      <input
-        type="text"
+      <textarea
+        spellCheck="true"
+        rows={2}
+        className="input-field"
         defaultValue={initialValue}
         onBlur={(e) => {
           updateFicha(fichaId, field, e.target.value);
@@ -165,6 +172,7 @@ const Home = () => {
             setEditingCell(null);
           }
         }}
+        onInput={(e) => autoResize(e.target)}
         autoFocus
       />
     );
@@ -192,7 +200,7 @@ const Home = () => {
       <main className="main-content">
         <div className="card">
           <div className="card-header">
-            <h2 className="card-title">Gestion de fichas</h2>
+            <h2 className="card-title">Gestión de fichas</h2>
           </div>
           <div className="card-content">
             <button className="button" onClick={() => setShowNewFichaForm(!showNewFichaForm)}>
@@ -203,6 +211,7 @@ const Home = () => {
                 <h3>Crear Nueva Ficha</h3>
                 <div className="form-grid">
                   <input
+                    spellCheck="true"
                     type="number"
                     className="input-field"
                     placeholder="Item..."
@@ -211,6 +220,7 @@ const Home = () => {
                     }}
                   />
                   <input
+                    spellCheck="true"
                     type="number"
                     className="input-field"
                     placeholder="#Ficha..."
@@ -218,99 +228,138 @@ const Home = () => {
                       setnewFichaN(event.target.value);
                     }}
                   />
-                  <input
+                  <textarea
+                    spellCheck="true"
+                    rows={1}
                     className="input-field"
                     placeholder="Cliente..."
                     onChange={(event) => {
                       setnewCliente(event.target.value);
                     }}
+                    onInput={(e) => autoResize(e.target)}
                   />
-                  <input
+                  <textarea
+                    spellCheck="true"
+                    rows={1}
                     className="input-field"
                     placeholder="Serie..."
                     onChange={(event) => {
                       setnewSerie(event.target.value);
                     }}
+                    onInput={(e) => autoResize(e.target)}
                   />
-                  <input
+                  <textarea
+                    spellCheck="true"
+                    rows={1}
                     className="input-field"
                     placeholder="Fecha Ingreso..."
                     onChange={(event) => {
                       setnewIngreso(event.target.value);
                     }}
+                    onInput={(e) => autoResize(e.target)}
                   />
-                  <input
+                  <textarea
+                    spellCheck="true"
+                    rows={1}
                     className="input-field"
                     placeholder="Fecha salida..."
                     onChange={(event) => {
                       setnewSalida(event.target.value);
                     }}
+                    onInput={(e) => autoResize(e.target)}
                   />
-                  <input
+                  <textarea
+                    spellCheck="true"
+                    rows={1}
                     className="input-field"
                     placeholder="Modelo..."
                     onChange={(event) => {
                       setnewModelo(event.target.value);
                     }}
+                    onInput={(e) => autoResize(e.target)}
                   />
-                  <input
+                  <textarea
+                    spellCheck="true"
+                    rows={1}
                     className="input-field"
                     placeholder="Observacion..."
                     onChange={(event) => {
                       setnewObservacion(event.target.value);
                     }}
+                    onInput={(e) => autoResize(e.target)}
                   />
-                  <input
+                  <textarea
+                    spellCheck="true"
+                    rows={1}
                     className="input-field"
                     placeholder="Diagnostico..."
                     onChange={(event) => {
                       setnewDiagnostico(event.target.value);
                     }}
+                    onInput={(e) => autoResize(e.target)}
                   />
-                  <input
+                  <textarea
+                    spellCheck="true"
+                    rows={1}
                     className="input-field"
                     placeholder="Necesidades..."
                     onChange={(event) => {
                       setnewNecesidades(event.target.value);
                     }}
+                    onInput={(e) => autoResize(e.target)}
                   />
-                  <input
+                  <textarea
+                    spellCheck="true"
+                    rows={1}
                     className="input-field"
                     placeholder="Repuestos..."
                     onChange={(event) => {
                       setnewRepuestos(event.target.value);
                     }}
+                    onInput={(e) => autoResize(e.target)}
                   />
-                  <input
+                  <textarea
+                    spellCheck="true"
+                    rows={1}
                     className="input-field"
                     placeholder="Facturar..."
                     onChange={(event) => {
                       setnewFacturar(event.target.value);
                     }}
+                    onInput={(e) => autoResize(e.target)}
                   />
-                  <input
+                  <textarea
+                    spellCheck="true"
+                    rows={1}
                     className="input-field"
                     placeholder="Entregado..."
                     onChange={(event) => {
                       setnewEntregado(event.target.value);
                     }}
+                    onInput={(e) => autoResize(e.target)}
                   />
-                  <input
+                  <textarea
+                    spellCheck="true"
+                    rows={1}
                     className="input-field"
                     placeholder="Num Factura..."
                     onChange={(event) => {
                       setnewNumeroFactura(event.target.value);
                     }}
+                    onInput={(e) => autoResize(e.target)}
                   />
-                  <input
+                  <textarea
+                    spellCheck="true"
+                    rows={1}
                     className="input-field"
                     placeholder="Pago Ricardo..."
                     onChange={(event) => {
                       setnewPagoRicardo(event.target.value);
                     }}
+                    onInput={(e) => autoResize(e.target)}
                   />
                 </div>
-                <button className="button" onClick={createFicha}> Crear Ficha</button>
+                <button className="button-newFicha" onClick={createFicha}> Crear Ficha</button>
               </div>
             )}
           </div>
