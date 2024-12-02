@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { db } from "../firebase-config"
 import { Pagination } from '@mui/material';
 import {
@@ -10,14 +10,13 @@ import {
   doc,
   query,
   orderBy,
-  limit,
 } from "firebase/firestore"
 import './repuestos.css'
 
 
 
 export default function Repuestos() {
-
+  
   const [newCodigo, setNewCodigo] = useState("")
   const [newDescripcion, setNewDescripcion] = useState("")
   const [newCantDisp, setNewCantDisp] = useState(0)
@@ -36,14 +35,13 @@ export default function Repuestos() {
   const [currentPage, setCurrentPage] = useState(1); // Página actual
   const [totalPages, setTotalPages] = useState(1); // Total de páginas
   const [isLoading, setIsLoading] = useState(true); // Estado de carga
-  const textareaRef = useRef(null);
 
-  if (textareaRef.current) {
-    textareaRef.current.style.height = "auto"; // Restablece la altura
-    textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`; // Establece la nueva altura
-  }
+  const autoResize = (textarea) => {
+    textarea.style.height = "auto"; // Restablecer altura
+    textarea.style.height = `${textarea.scrollHeight}px`; // Ajustar a la altura del contenido
+  };
 
-
+  // Crear repuesto
   const createRepuesto = async () => {
     await addDoc(repuestosCollectionRef, {
       codigo: newCodigo,
@@ -72,6 +70,7 @@ export default function Repuestos() {
     setShowNewRepuestoForm(false)
   }
 
+  // Actualizar repuesto
   const updateRepuesto = async (id, field, value) => {
     const repuestoDoc = doc(db, "repuestos", id)
     await updateDoc(repuestoDoc, { [field]: value })
@@ -83,6 +82,7 @@ export default function Repuestos() {
     )
   }
 
+  // Eliminar repuesto
   const deleteRepuesto = async (id) => {
     const userDoc = doc(db, "repuestos", id)
     await deleteDoc(userDoc)
@@ -101,8 +101,6 @@ export default function Repuestos() {
         setTotalPages(Math.ceil(repuestos.length / limit)); // Calcular el número total de páginas
         setDisplayedRepuestos(repuestos.slice(0, limit)); // Mostrar la primera página
 
-
-
       } catch (error) {
         console.error("Error al cargar los datos:", error);
       } finally {
@@ -120,12 +118,13 @@ export default function Repuestos() {
     setDisplayedRepuestos(allRepuestos.slice(startIndex, endIndex)); // Mostrar los registros de la página actual
   }, [currentPage, limit, allRepuestos]);
 
+  // Editar repuesto
   const makeEditable = (repuestoId, field, initialValue) => {
     return (
       <textarea
-        ref={textareaRef}
-        className="input"
         rows={2}
+        spellCheck="true"
+        className="input"
         defaultValue={initialValue}
         onBlur={(e) => {
           updateRepuesto(repuestoId, field, e.target.value)
@@ -137,6 +136,7 @@ export default function Repuestos() {
             setEditingCell(null)
           }
         }}
+        onInput={(e) => autoResize(e.target)}
         autoFocus
       />
     )
@@ -173,13 +173,13 @@ export default function Repuestos() {
               <div className='new-repuesto-form'>
                 <h3>Crear nuevo repuesto</h3>
                 <div className="form-grid">
-                  <textarea className="input" rows={1} placeholder="Codigo..." onChange={(e) => setNewCodigo(e.target.value)} />
-                  <textarea className="input" rows={1} placeholder="Descripcion..." onChange={(e) => setNewDescripcion(e.target.value)} />
-                  <input className="input" type="number" placeholder="Cantidad disponible..." onChange={(e) => setNewCantDisp(e.target.value)} />
-                  <textarea className="input" rows={1} placeholder="Numero estanteria..." onChange={(e) => setNewNumEstanteria(e.target.value)} />
-                  <textarea className="input" rows={1} placeholder="Numero estante..." onChange={(e) => setNewNumeroEstante(e.target.value)} />
-                  <textarea className="input" rows={1} placeholder="Numero BIN..." onChange={(e) => setNewNumeroBIN(e.target.value)} />
-                  <textarea className="input" rows={1} placeholder="Posicion BIN..." onChange={(e) => setNewPosicionBIN(e.target.value)} />
+                  <textarea spellCheck="true" className="input" rows={1} placeholder="Codigo..." onChange={(e) => setNewCodigo(e.target.value)} onInput={(e) => autoResize(e.target)} />
+                  <textarea spellCheck="true" className="input" rows={1} placeholder="Descripcion..." onChange={(e) => setNewDescripcion(e.target.value)} onInput={(e) => autoResize(e.target)}/>
+                  <input spellCheck="true" className="input" type="number" placeholder="Cantidad disponible..." onChange={(e) => setNewCantDisp(e.target.value)} onInput={(e) => autoResize(e.target)}/>
+                  <textarea spellCheck="true" className="input" rows={1} placeholder="Numero estanteria..." onChange={(e) => setNewNumEstanteria(e.target.value)} onInput={(e) => autoResize(e.target)}/>
+                  <textarea spellCheck="true" className="input" rows={1} placeholder="Numero estante..." onChange={(e) => setNewNumeroEstante(e.target.value)} onInput={(e) => autoResize(e.target)}/>
+                  <textarea spellCheck="true" className="input" rows={1} placeholder="Numero BIN..." onChange={(e) => setNewNumeroBIN(e.target.value)} onInput={(e) => autoResize(e.target)}/>
+                  <textarea spellCheck="true" className="input" rows={1} placeholder="Posicion BIN..." onChange={(e) => setNewPosicionBIN(e.target.value)} onInput={(e) => autoResize(e.target)}/>
                 </div>
                 <button className="button-newRepuesto" onClick={createRepuesto}>Crear Repuesto</button>
               </div>
@@ -258,5 +258,4 @@ export default function Repuestos() {
     </div>
   )
 }
-
 
