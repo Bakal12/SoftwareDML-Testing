@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { db } from "../firebase-config"
 import { Pagination } from '@mui/material';
 import {
@@ -14,22 +14,7 @@ import {
 } from "firebase/firestore"
 import './repuestos.css'
 
-function useNetworkStatus() {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  useEffect(() => {
-    const updateStatus = () => setIsOnline(navigator.onLine);
-    window.addEventListener("online", updateStatus);
-    window.addEventListener("offline", updateStatus);
-
-    return () => {
-      window.removeEventListener("online", updateStatus);
-      window.removeEventListener("offline", updateStatus);
-    };
-  }, []);
-
-  return isOnline;
-}
 
 export default function Repuestos() {
 
@@ -41,7 +26,6 @@ export default function Repuestos() {
   const [newNumeroBIN, setNewNumeroBIN] = useState("")
   const [newPosicionBIN, setNewPosicionBIN] = useState("")
 
-  const [repuestos, setRepuestos] = useState([])
   const repuestosCollectionRef = collection(db, 'repuestos')
   const [editingCell, setEditingCell] = useState(null)
   const [showNewRepuestoForm, setShowNewRepuestoForm] = useState(false)
@@ -50,12 +34,15 @@ export default function Repuestos() {
   const [displayedRepuestos, setDisplayedRepuestos] = useState([]); // Registros actuales en pantalla
   const [limit, setLimit] = useState(5); // Límite por página
   const [currentPage, setCurrentPage] = useState(1); // Página actual
-  //const [lastVisibleDocs, setLastVisibleDocs] = useState([]); // Referencias de las páginas
   const [totalPages, setTotalPages] = useState(1); // Total de páginas
   const [isLoading, setIsLoading] = useState(true); // Estado de carga
+  const textareaRef = useRef(null);
 
+  if (textareaRef.current) {
+    textareaRef.current.style.height = "auto"; // Restablece la altura
+    textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`; // Establece la nueva altura
+  }
 
-  const isOnline = useNetworkStatus();
 
   const createRepuesto = async () => {
     await addDoc(repuestosCollectionRef, {
@@ -68,7 +55,7 @@ export default function Repuestos() {
       posicion_BIN: newPosicionBIN
     })
 
-    setRepuestos((prevRepuestos) => [
+    setAllRepuestos((prevRepuestos) => [
       ...prevRepuestos,
       {
         id: repuestosCollectionRef.id,
@@ -89,7 +76,7 @@ export default function Repuestos() {
     const repuestoDoc = doc(db, "repuestos", id)
     await updateDoc(repuestoDoc, { [field]: value })
 
-    setRepuestos((prevRepuestos) =>
+    setAllRepuestos((prevRepuestos) =>
       prevRepuestos.map((repuesto) =>
         repuesto.id === id ? { ...repuesto, [field]: value } : repuesto
       )
@@ -100,7 +87,7 @@ export default function Repuestos() {
     const userDoc = doc(db, "repuestos", id)
     await deleteDoc(userDoc)
 
-    setRepuestos((prevRepuestos) => prevRepuestos.filter((repuesto) => repuesto.id !== id))
+    setAllRepuestos((prevRepuestos) => prevRepuestos.filter((repuesto) => repuesto.id !== id))
   }
 
   // Obtener todos los registros al cargar el componente
@@ -114,7 +101,6 @@ export default function Repuestos() {
         setTotalPages(Math.ceil(repuestos.length / limit)); // Calcular el número total de páginas
         setDisplayedRepuestos(repuestos.slice(0, limit)); // Mostrar la primera página
 
-        setRepuestos(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
 
 
       } catch (error) {
@@ -136,9 +122,10 @@ export default function Repuestos() {
 
   const makeEditable = (repuestoId, field, initialValue) => {
     return (
-      <input
-        type="text"
+      <textarea
+        ref={textareaRef}
         className="input"
+        rows={2}
         defaultValue={initialValue}
         onBlur={(e) => {
           updateRepuesto(repuestoId, field, e.target.value)
@@ -165,7 +152,6 @@ export default function Repuestos() {
                 Buscar Componentes Electrónicos
               </a>
             </li>
-            {isOnline ? <span>🟢 Conectado</span> : <span>🔴 Sin conexión</span>}
             <li>
               <a href="/pp/dml/home" className="nav-link">
                 Revisar Dispositivos Electrónicos por Entregar
@@ -184,38 +170,42 @@ export default function Repuestos() {
               {showNewRepuestoForm ? 'Cancelar' : 'Crear Nuevo Repuesto'}
             </button>
             {showNewRepuestoForm && (
-              <div className="form-grid">
-                <input className="input" placeholder="Codigo..." onChange={(e) => setNewCodigo(e.target.value)} />
-                <input className="input" placeholder="Descripcion..." onChange={(e) => setNewDescripcion(e.target.value)} />
-                <input className="input" type="number" placeholder="Cantidad disponible..." onChange={(e) => setNewCantDisp(e.target.value)} />
-                <input className="input" placeholder="Numero estanteria..." onChange={(e) => setNewNumEstanteria(e.target.value)} />
-                <input className="input" placeholder="Numero estante..." onChange={(e) => setNewNumeroEstante(e.target.value)} />
-                <input className="input" placeholder="Numero BIN..." onChange={(e) => setNewNumeroBIN(e.target.value)} />
-                <input className="input" placeholder="Posicion BIN..." onChange={(e) => setNewPosicionBIN(e.target.value)} />
-                <button className="button" onClick={createRepuesto}>Crear Repuesto</button>
+              <div className='new-repuesto-form'>
+                <h3>Crear nuevo repuesto</h3>
+                <div className="form-grid">
+                  <textarea className="input" rows={1} placeholder="Codigo..." onChange={(e) => setNewCodigo(e.target.value)} />
+                  <textarea className="input" rows={1} placeholder="Descripcion..." onChange={(e) => setNewDescripcion(e.target.value)} />
+                  <input className="input" type="number" placeholder="Cantidad disponible..." onChange={(e) => setNewCantDisp(e.target.value)} />
+                  <textarea className="input" rows={1} placeholder="Numero estanteria..." onChange={(e) => setNewNumEstanteria(e.target.value)} />
+                  <textarea className="input" rows={1} placeholder="Numero estante..." onChange={(e) => setNewNumeroEstante(e.target.value)} />
+                  <textarea className="input" rows={1} placeholder="Numero BIN..." onChange={(e) => setNewNumeroBIN(e.target.value)} />
+                  <textarea className="input" rows={1} placeholder="Posicion BIN..." onChange={(e) => setNewPosicionBIN(e.target.value)} />
+                </div>
+                <button className="button-newRepuesto" onClick={createRepuesto}>Crear Repuesto</button>
               </div>
             )}
           </div>
         </div>
         <div className="card">
           <div className="card-header">
-              {/* Selector de límite */}
-              <label htmlFor="limit">Resultados por página: </label>
-              <select
-                id="limit"
-                value={limit}
-                onChange={(e) => {
-                  setLimit(Number(e.target.value));
-                  setCurrentPage(1); // Reiniciar a la página 1 al cambiar el límite
-                }}
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
             <h2 className="card-title">Lista de Repuestos</h2>
+            {/* Selector de límite */}
+            <label htmlFor="limit" className=''>Resultados por página: </label>
+            <select
+              id="limit"
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setCurrentPage(1); // Reiniciar a la página 1 al cambiar el límite
+              }}
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={allRepuestos.length}>Todos</option>
+            </select>
           </div>
           <div className="card-content">
             <div className="table-container">
