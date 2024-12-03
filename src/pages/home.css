@@ -116,6 +116,7 @@ body {
   width: 100%;
   padding: 0.5rem;
   min-height: 35px;
+  max-block-size: 300px;
   border: 1px solid #d1d5db;
   border-radius: 0.375rem;
   font-size: 0.875rem;
@@ -132,8 +133,6 @@ body {
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
-
-
 
 /*----------------Buttons----------------*/
 .button {

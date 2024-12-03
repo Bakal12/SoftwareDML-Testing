@@ -10,13 +10,18 @@ import {
   doc,
   query,
   orderBy,
+  startAt,
+  endAt,
 } from "firebase/firestore"
 import './repuestos.css'
 
 
 
 export default function Repuestos() {
-  
+
+  /*-------------------------------------- VARIABLES --------------------------------------*/
+
+  // Variables que hacen referencia a los campos de la db
   const [newCodigo, setNewCodigo] = useState("")
   const [newDescripcion, setNewDescripcion] = useState("")
   const [newCantDisp, setNewCantDisp] = useState(0)
@@ -24,22 +29,27 @@ export default function Repuestos() {
   const [newNumeroEstante, setNewNumeroEstante] = useState("")
   const [newNumeroBIN, setNewNumeroBIN] = useState("")
   const [newPosicionBIN, setNewPosicionBIN] = useState("")
+  const repuestosCollectionRef = collection(db, 'repuestos') // Referencia a la coleccion de la db
 
-  const repuestosCollectionRef = collection(db, 'repuestos')
-  const [editingCell, setEditingCell] = useState(null)
-  const [showNewRepuestoForm, setShowNewRepuestoForm] = useState(false)
+  const [editingCell, setEditingCell] = useState(null) // Variable que referencia a editar las celdas
 
-  const [allRepuestos, setAllRepuestos] = useState([]); // Todos los registros
-  const [displayedRepuestos, setDisplayedRepuestos] = useState([]); // Registros actuales en pantalla
-  const [limit, setLimit] = useState(5); // Límite por página
-  const [currentPage, setCurrentPage] = useState(1); // Página actual
-  const [totalPages, setTotalPages] = useState(1); // Total de páginas
-  const [isLoading, setIsLoading] = useState(true); // Estado de carga
+  const [showNewRepuestoForm, setShowNewRepuestoForm] = useState(false) // Variable que referencia a mostrar la grilla para crear nuevo repuesto
+
+  const [allRepuestos, setAllRepuestos] = useState([]); // Variable que guarda todo el array de registros en la coleccion de la db
+  const [displayedRepuestos, setDisplayedRepuestos] = useState([]); // Guarda registros actuales en pantalla
+  const [limit, setLimit] = useState(5); // Guarda el límite por página
+  const [currentPage, setCurrentPage] = useState(1); // Guarda la página actual
+  const [totalPages, setTotalPages] = useState(1); // Guarda el total de páginas
+  const [isLoading, setIsLoading] = useState(true); // Guarda el estado de carga
+
+  const [searchTerm, setSearchTerm] = useState("") // Guarda el "prompt" del query para la busqueda
 
   const autoResize = (textarea) => {
     textarea.style.height = "auto"; // Restablecer altura
     textarea.style.height = `${textarea.scrollHeight}px`; // Ajustar a la altura del contenido
   };
+
+  /*-------------------------------------- C R U D --------------------------------------*/
 
   // Crear repuesto
   const createRepuesto = async () => {
@@ -90,17 +100,23 @@ export default function Repuestos() {
     setAllRepuestos((prevRepuestos) => prevRepuestos.filter((repuesto) => repuesto.id !== id))
   }
 
+  /*-------------------------------------- CARGA DE DATOS --------------------------------------*/
+
+  const loadAllRepuestos = async () => {
+    const repuestosQuery = query(repuestosCollectionRef, orderBy("codigo", "asc"));
+    const data = await getDocs(repuestosQuery);
+    const repuestos = data.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
+    setAllRepuestos(repuestos); // Guardar todos los registros
+    setTotalPages(Math.ceil(repuestos.length / limit)); // Calcular el número total de páginas
+    setDisplayedRepuestos(repuestos.slice(0, limit)); // Mostrar la primera página
+  };
+
   // Obtener todos los registros al cargar el componente
   useEffect(() => {
     const fetchAllRepuestos = async () => {
       setIsLoading(true); // Inicia la carga
       try {
-        const data = await getDocs(query(repuestosCollectionRef, orderBy("codigo", "asc")));
-        const repuestos = data.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
-        setAllRepuestos(repuestos); // Guardar todos los registros
-        setTotalPages(Math.ceil(repuestos.length / limit)); // Calcular el número total de páginas
-        setDisplayedRepuestos(repuestos.slice(0, limit)); // Mostrar la primera página
-
+        loadAllRepuestos();
       } catch (error) {
         console.error("Error al cargar los datos:", error);
       } finally {
@@ -110,6 +126,29 @@ export default function Repuestos() {
 
     fetchAllRepuestos();
   }, [limit]);
+
+  /*-------------------------------------- MISCELÁNEA --------------------------------------*/
+
+  // Funcion donde realiza el query para la busqueda
+  const searchRepuestosInDatabase = async (term) => {
+    if (term.trim() === "") {
+      loadAllRepuestos(); // Si el término está vacío, cargar todos los repuestos
+      return;
+    }
+    try {
+      const filteredQuery = query(
+        repuestosCollectionRef,
+        orderBy("codigo"),
+        startAt(term),
+        endAt(term + "\uf8ff")
+      );
+
+      const filteredData = await getDocs(filteredQuery);
+      setAllRepuestos(filteredData.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+    } catch (error) {
+      console.error("Error durante la búsqueda:", error);
+    }
+  };
 
   // Actualizar los registros mostrados cuando cambie la página o el límite
   useEffect(() => {
@@ -142,8 +181,11 @@ export default function Repuestos() {
     )
   }
 
+  /*-------------------------------------- CODIGO HTML --------------------------------------*/
+
   return (
     <div className="min-h-screen">
+      {/*------------------------------ HEADER ------------------------------*/}
       <header className="header">
         <nav className="nav">
           <ul>
@@ -165,6 +207,7 @@ export default function Repuestos() {
           <div className="card-header">
             <h2 className="card-title">Gestión de repuestos</h2>
           </div>
+          {/*------------------------------ GRILLA DE CREACION DE NUEVO REPUESTO ------------------------------*/}
           <div className="card-content">
             <button className="button" onClick={() => setShowNewRepuestoForm(!showNewRepuestoForm)}>
               {showNewRepuestoForm ? 'Cancelar' : 'Crear Nuevo Repuesto'}
@@ -174,22 +217,23 @@ export default function Repuestos() {
                 <h3>Crear nuevo repuesto</h3>
                 <div className="form-grid">
                   <textarea spellCheck="true" className="input" rows={1} placeholder="Codigo..." onChange={(e) => setNewCodigo(e.target.value)} onInput={(e) => autoResize(e.target)} />
-                  <textarea spellCheck="true" className="input" rows={1} placeholder="Descripcion..." onChange={(e) => setNewDescripcion(e.target.value)} onInput={(e) => autoResize(e.target)}/>
-                  <input spellCheck="true" className="input" type="number" placeholder="Cantidad disponible..." onChange={(e) => setNewCantDisp(e.target.value)} onInput={(e) => autoResize(e.target)}/>
-                  <textarea spellCheck="true" className="input" rows={1} placeholder="Numero estanteria..." onChange={(e) => setNewNumEstanteria(e.target.value)} onInput={(e) => autoResize(e.target)}/>
-                  <textarea spellCheck="true" className="input" rows={1} placeholder="Numero estante..." onChange={(e) => setNewNumeroEstante(e.target.value)} onInput={(e) => autoResize(e.target)}/>
-                  <textarea spellCheck="true" className="input" rows={1} placeholder="Numero BIN..." onChange={(e) => setNewNumeroBIN(e.target.value)} onInput={(e) => autoResize(e.target)}/>
-                  <textarea spellCheck="true" className="input" rows={1} placeholder="Posicion BIN..." onChange={(e) => setNewPosicionBIN(e.target.value)} onInput={(e) => autoResize(e.target)}/>
+                  <textarea spellCheck="true" className="input" rows={1} placeholder="Descripcion..." onChange={(e) => setNewDescripcion(e.target.value)} onInput={(e) => autoResize(e.target)} />
+                  <input spellCheck="true" className="input" type="number" placeholder="Cantidad disponible..." onChange={(e) => setNewCantDisp(e.target.value)} onInput={(e) => autoResize(e.target)} />
+                  <textarea spellCheck="true" className="input" rows={1} placeholder="Numero estanteria..." onChange={(e) => setNewNumEstanteria(e.target.value)} onInput={(e) => autoResize(e.target)} />
+                  <textarea spellCheck="true" className="input" rows={1} placeholder="Numero estante..." onChange={(e) => setNewNumeroEstante(e.target.value)} onInput={(e) => autoResize(e.target)} />
+                  <textarea spellCheck="true" className="input" rows={1} placeholder="Numero BIN..." onChange={(e) => setNewNumeroBIN(e.target.value)} onInput={(e) => autoResize(e.target)} />
+                  <textarea spellCheck="true" className="input" rows={1} placeholder="Posicion BIN..." onChange={(e) => setNewPosicionBIN(e.target.value)} onInput={(e) => autoResize(e.target)} />
                 </div>
                 <button className="button-newRepuesto" onClick={createRepuesto}>Crear Repuesto</button>
               </div>
             )}
           </div>
         </div>
+        {/*------------------------------ TABLA DE REGISTROS ------------------------------*/}
         <div className="card">
           <div className="card-header">
             <h2 className="card-title">Lista de Repuestos</h2>
-            {/* Selector de límite */}
+            {/*------- Selector de límite -------*/}
             <label htmlFor="limit" className=''>Resultados por página: </label>
             <select
               id="limit"
@@ -206,6 +250,17 @@ export default function Repuestos() {
               <option value={100}>100</option>
               <option value={allRepuestos.length}>Todos</option>
             </select>
+            <input
+              type="text"
+              className="input search-input"
+              placeholder="Buscar repuesto por código..."
+              value={searchTerm}
+              onChange={(e) => {
+                const term = e.target.value;
+                setSearchTerm(term);
+                searchRepuestosInDatabase(term); // Llama a la función de búsqueda
+              }}
+            />
           </div>
           <div className="card-content">
             <div className="table-container">
@@ -239,7 +294,7 @@ export default function Repuestos() {
                   ))}
                 </tbody>
               </table>
-              {/* Paginación */}
+              {/*------- Paginación -------*/}
               <div style={{ marginTop: "20px", display: "flex", justifyContent: "center" }}>
                 <Pagination
                   count={totalPages} // Número total de páginas
@@ -249,7 +304,7 @@ export default function Repuestos() {
                   disabled={isLoading} // Deshabilitar mientras los datos cargan
                 />
               </div>
-              {/* Indicador de carga */}
+              {/*------- Indicador de carga --------*/}
               {isLoading && <p>Cargando...</p>}
             </div>
           </div>

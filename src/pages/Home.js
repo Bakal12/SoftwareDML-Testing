@@ -1,5 +1,5 @@
 import "./home.css";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { db } from "../firebase-config";
 import { query, orderBy } from "firebase/firestore";
 import {
@@ -17,102 +17,76 @@ import ExcelJS from "exceljs";
 
 const Home = () => {
 
+  /*-------------------------------------- VARIABLES --------------------------------------*/
+
   const [newItem, setNewItem] = useState(0);
   const [newFichaN, setnewFichaN] = useState(0);
   const [newCliente, setnewCliente] = useState("")
   const [newSerie, setnewSerie] = useState(0)
-  const [newIngreso, setnewIngreso] = useState("")
-  const [newSalida, setnewSalida] = useState("")
   const [newModelo, setnewModelo] = useState("")
-  const [newObservacion, setnewObservacion] = useState("")
+  const [newNumBat, setnewNumBat] = useState("")
+  const [newNumCargador, setnewNumCargador] = useState("")
   const [newDiagnostico, setnewDiagnostico] = useState("")
-  const [newNecesidades, setnewNecesidades] = useState("")
-  const [newRepuestos, setnewRepuestos] = useState("")
-  const [newFacturar, setnewFacturar] = useState("")
-  const [newEntregado, setnewEntregado] = useState("")
-  const [newNumeroFactura, setnewNumeroFactura] = useState("")
-  const [newPagoRicardo, setnewPagoRicardo] = useState("")
+  const [newTipo, setnewTipo] = useState("")
+  const [newObservacion, setnewObservacion] = useState("")
+  const [newReparacion, setnewReparacion] = useState("")
+  const [newRepuestosColocados, setnewRepuestosColocados] = useState("")
+  const [newRepuestosFaltantes, setnewRepuestosFaltantes] = useState("")
+  const [newNumCiclos, setnewNumCliclos] = useState("")
+  const [newEstado, setnewEstado] = useState("")
 
-  const [ficha, setFicha] = useState([]);
-  const fichaCollectionRef = collection(db, 'ficha');
-  const [editingCell, setEditingCell] = useState(null);
-  const [showNewFichaForm, setShowNewFichaForm] = useState(false);
+  const [ficha, setFicha] = useState([]); // Guarda todo el array de registros de la collection
+  const fichaCollectionRef = collection(db, 'ficha'); // Variable que referencia a la collection de la db
+  const [editingCell, setEditingCell] = useState(null); // Variable que referencia a editar celdas
+  const [showNewFichaForm, setShowNewFichaForm] = useState(false); // Variable que referencia a mostrar la grilla para crear nueva ficha
 
-  const autoResize = (textarea) => {
-    textarea.style.height = "auto"; // Restablecer altura
-    textarea.style.height = `${textarea.scrollHeight}px`; // Ajustar a la altura del contenido
-  };
+  /*-------------------------------------- C R U D --------------------------------------*/
 
-
-  const exportToExcel = async (fichaData) => {
-    // Cargar la plantilla usando fetch
-    const templateBuffer = await fetch(templateFile).then((response) =>
-      response.arrayBuffer()
-    );
-
-    // Leer la plantilla usando ExcelJS
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(templateBuffer);
-
-    // Seleccionar la hoja de trabajo
-    const worksheet = workbook.getWorksheet(1); // Cambia el índice si necesitas otra hoja
-
-    // Modificar las celdas sin cambiar el formato
-    worksheet.getCell("A3").value = fichaData.numero_ficha;
-    worksheet.getCell("C7").value = fichaData.fecha_salida;
-    worksheet.getCell("C11").value = fichaData.cliente;
-    worksheet.getCell("C14").value = fichaData.fecha_ingreso;
-    worksheet.getCell("E13").value = fichaData.serie;
-    worksheet.getCell("A18").value = fichaData.diagnostico;
-    worksheet.getCell("A29").value = fichaData.necesidades;
-
-    // Exportar el archivo
-    const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer], { type: "application/octet-stream" }), `${fichaData.numero_ficha}-${fichaData.cliente}-${fichaData.serie}.xlsx`);
-  };
-
+  // Crear nuevo registro de ficha
   const createFicha = async () => {
     await addDoc(fichaCollectionRef, {
       item: Number(newItem),
       numero_ficha: Number(newFichaN),
       cliente: newCliente,
       serie: newSerie,
-      fecha_ingreso: newIngreso,
-      fecha_salida: newSalida,
       modelo: newModelo,
-      observacion: newObservacion,
+      nº_bat: newNumBat,
+      nº_cargador: newNumCargador,
       diagnostico: newDiagnostico,
-      necesidades: newNecesidades,
-      repuestos: newRepuestos,
-      facturar: newFacturar,
-      entregado: newEntregado,
-      numero_factura: Number(newNumeroFactura),
-      pago_ricardo: newPagoRicardo
+      tipo: newTipo,
+      observaciones: newObservacion,
+      reparacion: newReparacion,
+      repuestos_colocados: newRepuestosColocados,
+      repuestos_faltantes: newRepuestosFaltantes,
+      nº_ciclos: newNumCiclos,
+      estado: newEstado,
     });
 
     setFicha((prevFicha) => [
       ...prevFicha,
       {
-        id: fichaCollectionRef.id, item: Number(newItem),
+        id: fichaCollectionRef.id,
+        item: Number(newItem),
         numero_ficha: Number(newFichaN),
         cliente: newCliente,
         serie: newSerie,
-        fecha_ingreso: newIngreso,
-        fecha_salida: newSalida,
         modelo: newModelo,
-        observacion: newObservacion,
+        nº_bat: newNumBat,
+        nº_cargador: newNumCargador,
         diagnostico: newDiagnostico,
-        necesidades: newNecesidades,
-        repuestos: newRepuestos,
-        facturar: newFacturar,
-        entregado: newEntregado,
-        numero_factura: Number(newNumeroFactura),
-        pago_ricardo: newPagoRicardo
+        tipo: newTipo,
+        observaciones: newObservacion,
+        reparacion: newReparacion,
+        repuestos_colocados: newRepuestosColocados,
+        repuestos_faltantes: newRepuestosFaltantes,
+        nº_ciclos: newNumCiclos,
+        estado: newEstado,
       },
     ]);
     setShowNewFichaForm(false);
   };
 
+  // Actualizar registro de ficha modificado
   const updateFicha = async (id, field, value) => {
     const fichaDoc = doc(db, "ficha", id);
     await updateDoc(fichaDoc, { [field]: value });
@@ -122,7 +96,8 @@ const Home = () => {
       )
     );
   };
-
+  
+  // Eliminar registro de ficha
   const deleteFicha = async (id) => {
     const userDoc = doc(db, "ficha", id);
     await deleteDoc(userDoc);
@@ -130,7 +105,10 @@ const Home = () => {
     setFicha((prevFicha) => prevFicha.filter((ficha) => ficha.id !== id));
 
   };
+  
+  
 
+  // Recopila todos los registros de la coleccion de la db
   useEffect(() => {
     const getFicha = async () => {
       const fichaQuery = query(fichaCollectionRef, orderBy("item", "asc"));
@@ -155,30 +133,94 @@ const Home = () => {
     getFicha();
   })
 
-  const makeEditable = (fichaId, field, initialValue) => {
-    return (
-      <textarea
-        spellCheck="true"
-        rows={2}
-        className="input-field"
-        defaultValue={initialValue}
-        onBlur={(e) => {
-          updateFicha(fichaId, field, e.target.value);
-          setEditingCell(null);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            updateFicha(fichaId, field, e.target.value);
-            setEditingCell(null);
-          }
-        }}
-        onInput={(e) => autoResize(e.target)}
-        autoFocus
-      />
+  /*-------------------------------------- MISCELÁNEA --------------------------------------*/
+
+  // Funcion para crear archivo Excel importando ciertos datos de la tabla
+  const exportToExcel = async (fichaData) => {
+    // Cargar la plantilla usando fetch
+    const templateBuffer = await fetch(templateFile).then((response) =>
+      response.arrayBuffer()
     );
+
+    // Leer la plantilla usando ExcelJS
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(templateBuffer);
+
+    // Seleccionar la hoja de trabajo
+    const worksheet = workbook.getWorksheet(1); // Cambia el índice si necesitas otra hoja
+
+    // Modificar las celdas sin cambiar el formato
+    worksheet.getCell("A3").value = fichaData.numero_ficha;
+    worksheet.getCell("C11").value = fichaData.cliente;
+    worksheet.getCell("E13").value = fichaData.serie;
+    worksheet.getCell("E14").value = fichaData.nº_bat;
+    worksheet.getCell("E15").value = fichaData.nº_cargador;
+    worksheet.getCell("A18").value = fichaData.diagnostico;
+    worksheet.getCell("A29").value = fichaData.reparacion;
+
+    // Exportar el archivo
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer], { type: "application/octet-stream" }), `${fichaData.numero_ficha}-${fichaData.cliente}-${fichaData.serie}.xlsx`);
   };
 
+  // Autoredimensionado de las celdas una vez llegado a su límite de espacio
+  const autoResize = (textarea) => {
+    textarea.style.height = "auto"; // Restablecer altura
+    textarea.style.height = `${textarea.scrollHeight}px`; // Ajustar a la altura del contenido
+  };
 
+  // Editar las celdas
+  const makeEditable = (fichaId, field, initialValue) => {
+    const options = {
+      tipo: ["Manual", "A batería", "Neumática"],
+      modelo: ["ITA 10", "ITA 11", "ITA 12", "ITA 20", "ITA 21", "ITA 24", "ITA 25", "CT 20", "CT 25", "CT 40", "CTT 20", "CTT 25", "CTT 40"],
+      estado: ["En revisión", "A la espera de repuestos", "Lista para entregar", "Entregada"],
+    };
+
+    if (options[field]) {
+      return (
+        <select
+          className="input-field"
+          defaultValue={initialValue}
+          onChange={(e) => {
+            updateFicha(fichaId, field, e.target.value);
+            setEditingCell(null);
+          }}
+          onBlur={() => setEditingCell(null)}
+          autoFocus
+        >
+          {options[field].map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      );
+    } else {
+      return (
+        <textarea
+          spellCheck="true"
+          rows={2}
+          className="input-field"
+          defaultValue={initialValue}
+          onBlur={(e) => {
+            updateFicha(fichaId, field, e.target.value);
+            setEditingCell(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              updateFicha(fichaId, field, e.target.value);
+              setEditingCell(null);
+            }
+          }}
+          onInput={(e) => autoResize(e.target)}
+          autoFocus
+        />
+      );
+    }
+  };
+
+  /*-------------------------------------- HTML --------------------------------------*/
   return (
     <div className="app-container">
       <header className="header">
@@ -211,13 +253,10 @@ const Home = () => {
                 <h3>Crear Nueva Ficha</h3>
                 <div className="form-grid">
                   <input
-                    spellCheck="true"
                     type="number"
                     className="input-field"
-                    placeholder="Item..."
-                    onChange={(event) => {
-                      setNewItem(event.target.value);
-                    }}
+                    value={newItem}
+                    disabled
                   />
                   <input
                     spellCheck="true"
@@ -248,43 +287,46 @@ const Home = () => {
                     }}
                     onInput={(e) => autoResize(e.target)}
                   />
-                  <textarea
-                    spellCheck="true"
-                    rows={1}
-                    className="input-field"
-                    placeholder="Fecha Ingreso..."
-                    onChange={(event) => {
-                      setnewIngreso(event.target.value);
-                    }}
-                    onInput={(e) => autoResize(e.target)}
-                  />
-                  <textarea
-                    spellCheck="true"
-                    rows={1}
-                    className="input-field"
-                    placeholder="Fecha salida..."
-                    onChange={(event) => {
-                      setnewSalida(event.target.value);
-                    }}
-                    onInput={(e) => autoResize(e.target)}
-                  />
-                  <textarea
-                    spellCheck="true"
-                    rows={1}
+                  <select
                     className="input-field"
                     placeholder="Modelo..."
                     onChange={(event) => {
                       setnewModelo(event.target.value);
                     }}
+                    value={newModelo}
+                  >
+                    <option value="" disabled>Modelo...</option>
+                    <option value="ITA 10">ITA 10</option>
+                    <option value="ITA 11">ITA 11</option>
+                    <option value="ITA 12">ITA 12</option>
+                    <option value="ITA 20">ITA 20</option>
+                    <option value="ITA 21">ITA 21</option>
+                    <option value="ITA 24">ITA 24</option>
+                    <option value="ITA 25">ITA 25</option>
+                    <option value="CT 20">CT 20</option>
+                    <option value="CT 25">CT 25</option>
+                    <option value="CT 40">CT 40</option>
+                    <option value="CTT 20">CTT 20</option>
+                    <option value="CTT 25">CTT 25</option>
+                    <option value="CTT 40">CTT 40</option>
+                  </select>
+                  <textarea
+                    spellCheck="true"
+                    rows={1}
+                    className="input-field"
+                    placeholder="Nº Bat..."
+                    onChange={(event) => {
+                      setnewNumBat(event.target.value);
+                    }}
                     onInput={(e) => autoResize(e.target)}
                   />
                   <textarea
                     spellCheck="true"
                     rows={1}
                     className="input-field"
-                    placeholder="Observacion..."
+                    placeholder="Nº Cargador..."
                     onChange={(event) => {
-                      setnewObservacion(event.target.value);
+                      setnewNumCargador(event.target.value);
                     }}
                     onInput={(e) => autoResize(e.target)}
                   />
@@ -298,13 +340,26 @@ const Home = () => {
                     }}
                     onInput={(e) => autoResize(e.target)}
                   />
+                  <select
+                    className="input-field"
+                    placeholder="Tipo..."
+                    onChange={(event) => {
+                      setnewTipo(event.target.value);
+                    }}
+                    value={newTipo}
+                  >
+                    <option value="" disabled>Tipo...</option>
+                    <option value="Manual">Manual</option>
+                    <option value="A batería">A batería</option>
+                    <option value="Neumática">Neumática</option>
+                  </select>
                   <textarea
                     spellCheck="true"
                     rows={1}
                     className="input-field"
-                    placeholder="Necesidades..."
+                    placeholder="Observaciones..."
                     onChange={(event) => {
-                      setnewNecesidades(event.target.value);
+                      setnewObservacion(event.target.value);
                     }}
                     onInput={(e) => autoResize(e.target)}
                   />
@@ -312,9 +367,9 @@ const Home = () => {
                     spellCheck="true"
                     rows={1}
                     className="input-field"
-                    placeholder="Repuestos..."
+                    placeholder="Reparacion..."
                     onChange={(event) => {
-                      setnewRepuestos(event.target.value);
+                      setnewReparacion(event.target.value);
                     }}
                     onInput={(e) => autoResize(e.target)}
                   />
@@ -322,9 +377,9 @@ const Home = () => {
                     spellCheck="true"
                     rows={1}
                     className="input-field"
-                    placeholder="Facturar..."
+                    placeholder="Repuestos Colocados..."
                     onChange={(event) => {
-                      setnewFacturar(event.target.value);
+                      setnewRepuestosColocados(event.target.value);
                     }}
                     onInput={(e) => autoResize(e.target)}
                   />
@@ -332,9 +387,9 @@ const Home = () => {
                     spellCheck="true"
                     rows={1}
                     className="input-field"
-                    placeholder="Entregado..."
+                    placeholder="Repuestos Faltantes..."
                     onChange={(event) => {
-                      setnewEntregado(event.target.value);
+                      setnewRepuestosFaltantes(event.target.value);
                     }}
                     onInput={(e) => autoResize(e.target)}
                   />
@@ -342,22 +397,28 @@ const Home = () => {
                     spellCheck="true"
                     rows={1}
                     className="input-field"
-                    placeholder="Num Factura..."
+                    placeholder="Nº Ciclos..."
                     onChange={(event) => {
-                      setnewNumeroFactura(event.target.value);
+                      setnewNumCliclos(event.target.value);
                     }}
                     onInput={(e) => autoResize(e.target)}
                   />
-                  <textarea
+                  <select
                     spellCheck="true"
                     rows={1}
                     className="input-field"
-                    placeholder="Pago Ricardo..."
+                    placeholder="Estado..."
                     onChange={(event) => {
-                      setnewPagoRicardo(event.target.value);
+                      setnewEstado(event.target.value);
                     }}
-                    onInput={(e) => autoResize(e.target)}
-                  />
+                    value={newEstado}
+                  >
+                    <option value="" disabled>Estado...</option>
+                    <option value="En revisión">En revisión</option>
+                    <option value="A la espera de repuestos">A la espera de repuestos</option>
+                    <option value="Lista para entregar">Lista para entregar</option>
+                    <option value="Entregada">Entregada</option>
+                  </select>
                 </div>
                 <button className="button-newFicha" onClick={createFicha}> Crear Ficha</button>
               </div>
@@ -376,18 +437,18 @@ const Home = () => {
                     <th># Ítem</th>
                     <th># Ficha</th>
                     <th>Cliente</th>
-                    <th>Serie</th>
-                    <th>Fecha Ingreso</th>
-                    <th>Fecha Salida</th>
+                    <th>Nº Serie</th>
                     <th>Modelo</th>
-                    <th>Observación</th>
-                    <th>Diagnóstico</th>
-                    <th>Necesidades</th>
-                    <th>Repuestos</th>
-                    <th>Facturar</th>
-                    <th>Entregado</th>
-                    <th>NºFactura</th>
-                    <th>Pago Ricardo</th>
+                    <th>Nº Bat</th>
+                    <th>Nº Cargador</th>
+                    <th>Diagnóstico ingreso</th>
+                    <th>Tipo</th>
+                    <th>Observaciones</th>
+                    <th>Reparación</th>
+                    <th>Repuestos Colocados</th>
+                    <th>Repuestos Faltantes</th>
+                    <th>Nº Ciclos</th>
+                    <th>Estado</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -395,7 +456,7 @@ const Home = () => {
                   {ficha.map((ficha) => {
                     return (
                       <tr key={ficha.id}>
-                        {["item", "numero_ficha", "cliente", "serie", "fecha_ingreso", "fecha_salida", "modelo", "observacion", "diagnostico", "necesidades", "repuestos", "facturar", "entregado", "numero_factura", "pago_ricardo"].map((field) => (
+                        {["item", "numero_ficha", "cliente", "serie", "modelo", "nº_bat", "nº_cargador", "diagnostico", "tipo", "observaciones", "reparacion", "repuestos_colocados", "repuestos_faltantes", "nº_ciclos"].map((field) => (
                           <td
                             key={field}
                             onDoubleClick={() => setEditingCell({ id: ficha.id, field })}
@@ -405,6 +466,22 @@ const Home = () => {
                               : ficha[field]}
                           </td>
                         ))}
+                        <td
+                          key="estado"
+                          style={{
+                            backgroundColor:
+                              ficha.estado === "En revisión" ? "yellow" :
+                                ficha.estado === "A la espera de repuestos" ? "orange" :
+                                  ficha.estado === "Lista para entregar" ? "darkgreen" :
+                                    ficha.estado === "Entregada" ? "lightgreen" : "transparent",
+                            color: ficha.estado === "Lista para entregar" ? "white" : "black",
+                          }}
+                          onDoubleClick={() => setEditingCell({ id: ficha.id, field: "estado" })}
+                        >
+                          {editingCell?.id === ficha.id && editingCell.field === "estado"
+                            ? makeEditable(ficha.id, "estado", ficha.estado)
+                            : ficha.estado}
+                        </td>
                         <td>
                           <button className="button button-destructive" onClick={() => { deleteFicha(ficha.id); }}>Eliminar</button>
                           <button className="button button-excel" onClick={() => exportToExcel(ficha)}>Generar Excel</button>
