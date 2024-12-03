@@ -215,3 +215,49 @@ body {
 .table tr:last-child td {
   border-bottom: 1px solid #c5c5c5;
 }
+
+/* Contenedor principal para textarea con tooltip */
+.textarea-with-tooltip {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+}
+
+/* Ícono de información */
+.info-icon-container {
+  margin-left: 10px;
+  position: relative;
+  cursor: pointer;
+}
+
+.info-icon {
+  font-size: 14px;
+  color: #555;
+  user-select: none;
+}
+
+/* Tooltip */
+.tooltip {
+  display: none;
+  position: absolute;
+  top: -30px; /* Ajusta según tu diseño */
+  left: 0;
+  background-color: #333;
+  color: #fff;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+.info-icon-container:hover .tooltip {
+  display: block;
+}
+
+.repuestos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* Espaciado entre líneas */
+  padding: 5px;
+}
