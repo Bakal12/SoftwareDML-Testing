@@ -1,5 +1,5 @@
 import "./home.css";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { db } from "../firebase-config";
 import { query, orderBy } from "firebase/firestore";
 import {
@@ -173,8 +173,8 @@ const Home = () => {
   const makeEditable = (fichaId, field, initialValue) => {
     const isRepuestosField = field === "repuestos_colocados" || field === "repuestos_faltantes";
 
+    // Renderizar campos según el tipo
     if (isRepuestosField) {
-      // Renderizar interfaz para editar repuestos
       const repuestosMap = initialValue || {};
 
       return (
@@ -198,7 +198,7 @@ const Home = () => {
               />
               <input
                 type="number"
-                defaultValue={cantidades[0]} // Suponemos que solo hay una cantidad por repuesto
+                defaultValue={cantidades[0]}
                 className="input-field"
                 placeholder="Cantidad"
                 onBlur={(e) => {
@@ -255,31 +255,56 @@ const Home = () => {
           </div>
         </div>
       );
-    } else {
-      // Resto de las celdas (no modificadas)
+    }
+
+    // Opciones predefinidas para "Tipo", "Modelo" y "Estado"
+    const predefinedOptions = {
+      tipo: ["Manual", "A batería", "Neumática"],
+      modelo: ["ITA 10", "ITA 11", "ITA 12", "ITA 20", "ITA 21", "ITA 24", "ITA 25", "CT 20", "CT 25", "CT 40", "CTT 20", "CTT 25", "CTT 40"],
+      estado: ["En revisión", "A la espera de repuestos", "Lista para entregar", "Entregada"],
+    };
+
+    if (predefinedOptions[field]) {
       return (
-        <textarea
-          spellCheck="true"
-          rows={2}
+        <select
           className="input-field"
           defaultValue={initialValue}
-          onBlur={(e) => {
+          onChange={(e) => {
             updateFicha(fichaId, field, e.target.value);
             setEditingCell(null);
           }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              updateFicha(fichaId, field, e.target.value);
-              setEditingCell(null);
-            }
-          }}
-          onInput={(e) => autoResize(e.target)}
-          autoFocus
-        />
+        >
+          {predefinedOptions[field].map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
       );
     }
-  };
 
+    // Para otros campos
+    return (
+      <textarea
+        spellCheck="true"
+        rows={2}
+        className="input-field"
+        defaultValue={initialValue}
+        onBlur={(e) => {
+          updateFicha(fichaId, field, e.target.value);
+          setEditingCell(null);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            updateFicha(fichaId, field, e.target.value);
+            setEditingCell(null);
+          }
+        }}
+        onInput={(e) => autoResize(e.target)}
+        autoFocus
+      />
+    );
+  };
 
   const parseRepuestos = (input) => {
     const lines = input.split("\n").filter((line) => line.trim() !== "");
@@ -300,9 +325,9 @@ const Home = () => {
   };
 
   const formatRepuestosForDisplay = (repuestosMap) => {
-    return Object.entries(repuestosMap)
-      .map(([nombre, cantidades]) => `${nombre} (${cantidades.join(", ")})`)
-      .join("\n");
+    return Object.entries(repuestosMap).map(
+      ([nombre, cantidades]) => `${nombre} (${cantidades.join(", ")})`
+    );
   };
 
   /*-------------------------------------- HTML --------------------------------------*/
@@ -458,26 +483,45 @@ const Home = () => {
                     }}
                     onInput={(e) => autoResize(e.target)}
                   />
-                  <textarea
-                    spellCheck="true"
-                    rows={1}
-                    className="input-field"
-                    placeholder="Repuesto (Cantidad)..."
-                    onChange={(event) => {
-                      setnewRepuestosColocados(parseRepuestos(event.target.value));
-                    }}
-                    onInput={(e) => autoResize(e.target)}
-                  ></textarea>
-                  <textarea
-                    spellCheck="true"
-                    rows={1}
-                    className="input-field"
-                    placeholder="Repuesto (Cantidad)..."
-                    onChange={(event) => {
-                      setnewRepuestosFaltantes(parseRepuestos(event.target.value));
-                    }}
-                    onInput={(e) => autoResize(e.target)}
-                  ></textarea>
+                  <div className="textarea-with-tooltip">
+                    <textarea
+                      spellCheck="true"
+                      rows={1}
+                      className="input-field"
+                      placeholder="Repuesto_colocado (Cantidad)..."
+                      onChange={(event) => {
+                        setnewRepuestosColocados(parseRepuestos(event.target.value));
+                      }}
+                      onInput={(e) => autoResize(e.target)}
+                    ></textarea>
+                    <div className="info-icon-container">
+                      <span className="info-icon">ℹ️</span>
+                      <div className="tooltip">
+                        Respeta la nomenclatura: "nombre_del_repuesto (cantidad)", separando cada
+                        repuesto por una nueva línea (Enter del teclado).
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="textarea-with-tooltip">
+                    <textarea
+                      spellCheck="true"
+                      rows={1}
+                      className="input-field"
+                      placeholder="Repuesto_faltante (Cantidad)..."
+                      onChange={(event) => {
+                        setnewRepuestosFaltantes(parseRepuestos(event.target.value));
+                      }}
+                      onInput={(e) => autoResize(e.target)}
+                    ></textarea>
+                    <div className="info-icon-container">
+                      <span className="info-icon">ℹ️</span>
+                      <div className="tooltip">
+                        Respeta la nomenclatura: "nombre_del_repuesto (cantidad)", separando cada
+                        repuesto por una nueva línea (Enter del teclado).
+                      </div>
+                    </div>
+                  </div>
                   <textarea
                     spellCheck="true"
                     rows={1}
@@ -560,7 +604,13 @@ const Home = () => {
                         >
                           {editingCell?.id === ficha.id && editingCell.field === "repuestos_colocados"
                             ? makeEditable(ficha.id, "repuestos_colocados", ficha.repuestos_colocados)
-                            : formatRepuestosForDisplay(ficha.repuestos_colocados)}
+                            : (
+                              <div className="repuestos-list">
+                                {formatRepuestosForDisplay(ficha.repuestos_colocados).map((repuesto, index) => (
+                                  <div key={index}>{repuesto}</div>
+                                ))}
+                              </div>
+                            )}
                         </td>
                         <td
                           key="repuestos_faltantes"
@@ -568,7 +618,13 @@ const Home = () => {
                         >
                           {editingCell?.id === ficha.id && editingCell.field === "repuestos_faltantes"
                             ? makeEditable(ficha.id, "repuestos_faltantes", ficha.repuestos_faltantes)
-                            : formatRepuestosForDisplay(ficha.repuestos_faltantes)}
+                            : (
+                              <div className="repuestos-list">
+                                {formatRepuestosForDisplay(ficha.repuestos_faltantes).map((repuesto, index) => (
+                                  <div key={index}>{repuesto}</div>
+                                ))}
+                              </div>
+                            )}
                         </td>
                         <td
                           key="estado"
@@ -606,4 +662,3 @@ const Home = () => {
 }
 
 export default Home;
-
