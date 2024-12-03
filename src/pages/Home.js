@@ -96,7 +96,7 @@ const Home = () => {
       )
     );
   };
-  
+
   // Eliminar registro de ficha
   const deleteFicha = async (id) => {
     const userDoc = doc(db, "ficha", id);
@@ -105,8 +105,8 @@ const Home = () => {
     setFicha((prevFicha) => prevFicha.filter((ficha) => ficha.id !== id));
 
   };
-  
-  
+
+
 
   // Recopila todos los registros de la coleccion de la db
   useEffect(() => {
@@ -171,32 +171,92 @@ const Home = () => {
 
   // Editar las celdas
   const makeEditable = (fichaId, field, initialValue) => {
-    const options = {
-      tipo: ["Manual", "A batería", "Neumática"],
-      modelo: ["ITA 10", "ITA 11", "ITA 12", "ITA 20", "ITA 21", "ITA 24", "ITA 25", "CT 20", "CT 25", "CT 40", "CTT 20", "CTT 25", "CTT 40"],
-      estado: ["En revisión", "A la espera de repuestos", "Lista para entregar", "Entregada"],
-    };
+    const isRepuestosField = field === "repuestos_colocados" || field === "repuestos_faltantes";
 
-    if (options[field]) {
+    if (isRepuestosField) {
+      // Renderizar interfaz para editar repuestos
+      const repuestosMap = initialValue || {};
+
       return (
-        <select
-          className="input-field"
-          defaultValue={initialValue}
-          onChange={(e) => {
-            updateFicha(fichaId, field, e.target.value);
-            setEditingCell(null);
-          }}
-          onBlur={() => setEditingCell(null)}
-          autoFocus
-        >
-          {options[field].map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
+        <div className="editable-repuestos">
+          {Object.entries(repuestosMap).map(([nombre, cantidades], index) => (
+            <div key={index} className="repuesto-row">
+              <input
+                type="text"
+                defaultValue={nombre}
+                className="input-field"
+                placeholder="Nombre del repuesto"
+                onBlur={(e) => {
+                  const newNombre = e.target.value;
+                  const newRepuestos = { ...repuestosMap };
+                  if (newNombre !== nombre) {
+                    newRepuestos[newNombre] = newRepuestos[nombre];
+                    delete newRepuestos[nombre];
+                  }
+                  updateFicha(fichaId, field, newRepuestos);
+                }}
+              />
+              <input
+                type="number"
+                defaultValue={cantidades[0]} // Suponemos que solo hay una cantidad por repuesto
+                className="input-field"
+                placeholder="Cantidad"
+                onBlur={(e) => {
+                  const newCantidad = Number(e.target.value);
+                  const newRepuestos = { ...repuestosMap };
+                  newRepuestos[nombre] = [newCantidad];
+                  updateFicha(fichaId, field, newRepuestos);
+                }}
+              />
+              <button
+                className="button button-delete"
+                onClick={() => {
+                  const newRepuestos = { ...repuestosMap };
+                  delete newRepuestos[nombre];
+                  updateFicha(fichaId, field, newRepuestos);
+                }}
+              >
+                Eliminar
+              </button>
+            </div>
           ))}
-        </select>
+          <div className="add-repuesto">
+            <input
+              type="text"
+              className="input-field"
+              placeholder="Nuevo repuesto"
+              id={`new-repuesto-${field}`}
+            />
+            <input
+              type="number"
+              className="input-field"
+              placeholder="Cantidad"
+              id={`new-cantidad-${field}`}
+            />
+            <button
+              className="button button-add"
+              onClick={() => {
+                const nombre = document.getElementById(`new-repuesto-${field}`).value;
+                const cantidad = Number(document.getElementById(`new-cantidad-${field}`).value);
+
+                if (nombre && cantidad > 0) {
+                  const newRepuestos = { ...repuestosMap };
+                  newRepuestos[nombre] = [cantidad];
+                  updateFicha(fichaId, field, newRepuestos);
+
+                  // Limpiar los campos de entrada
+                  document.getElementById(`new-repuesto-${field}`).value = "";
+                  document.getElementById(`new-cantidad-${field}`).value = "";
+                }
+              }}
+            >
+              Agregar
+            </button>
+          </div>
+        </div>
       );
     } else {
+      // Resto de las celdas (no modificadas)
       return (
         <textarea
           spellCheck="true"
@@ -218,6 +278,31 @@ const Home = () => {
         />
       );
     }
+  };
+
+
+  const parseRepuestos = (input) => {
+    const lines = input.split("\n").filter((line) => line.trim() !== "");
+    const repuestosMap = {};
+
+    lines.forEach((line) => {
+      const match = line.match(/^(.+)\s\((\d+)\)$/);
+      if (match) {
+        const [_, nombre, cantidad] = match;
+        if (!repuestosMap[nombre]) {
+          repuestosMap[nombre] = [];
+        }
+        repuestosMap[nombre].push(Number(cantidad));
+      }
+    });
+
+    return repuestosMap;
+  };
+
+  const formatRepuestosForDisplay = (repuestosMap) => {
+    return Object.entries(repuestosMap)
+      .map(([nombre, cantidades]) => `${nombre} (${cantidades.join(", ")})`)
+      .join("\n");
   };
 
   /*-------------------------------------- HTML --------------------------------------*/
@@ -377,29 +462,29 @@ const Home = () => {
                     spellCheck="true"
                     rows={1}
                     className="input-field"
-                    placeholder="Repuestos Colocados..."
+                    placeholder="Repuesto (Cantidad)..."
                     onChange={(event) => {
-                      setnewRepuestosColocados(event.target.value);
+                      setnewRepuestosColocados(parseRepuestos(event.target.value));
                     }}
                     onInput={(e) => autoResize(e.target)}
-                  />
+                  ></textarea>
                   <textarea
                     spellCheck="true"
                     rows={1}
                     className="input-field"
-                    placeholder="Repuestos Faltantes..."
+                    placeholder="Repuesto (Cantidad)..."
                     onChange={(event) => {
-                      setnewRepuestosFaltantes(event.target.value);
+                      setnewRepuestosFaltantes(parseRepuestos(event.target.value));
                     }}
                     onInput={(e) => autoResize(e.target)}
-                  />
+                  ></textarea>
                   <textarea
                     spellCheck="true"
                     rows={1}
                     className="input-field"
                     placeholder="Nº Ciclos..."
                     onChange={(event) => {
-                      setnewNumCliclos(event.target.value);
+                      setnewNumCliclos(parseRepuestos(event.target.value));
                     }}
                     onInput={(e) => autoResize(e.target)}
                   />
@@ -445,9 +530,9 @@ const Home = () => {
                     <th>Tipo</th>
                     <th>Observaciones</th>
                     <th>Reparación</th>
+                    <th>Nº Ciclos</th>
                     <th>Repuestos Colocados</th>
                     <th>Repuestos Faltantes</th>
-                    <th>Nº Ciclos</th>
                     <th>Estado</th>
                     <th>Acciones</th>
                   </tr>
@@ -456,7 +541,10 @@ const Home = () => {
                   {ficha.map((ficha) => {
                     return (
                       <tr key={ficha.id}>
-                        {["item", "numero_ficha", "cliente", "serie", "modelo", "nº_bat", "nº_cargador", "diagnostico", "tipo", "observaciones", "reparacion", "repuestos_colocados", "repuestos_faltantes", "nº_ciclos"].map((field) => (
+                        <td key="item">
+                          {ficha.item}
+                        </td>
+                        {["numero_ficha", "cliente", "serie", "modelo", "nº_bat", "nº_cargador", "diagnostico", "tipo", "observaciones", "reparacion", "nº_ciclos"].map((field) => (
                           <td
                             key={field}
                             onDoubleClick={() => setEditingCell({ id: ficha.id, field })}
@@ -466,6 +554,22 @@ const Home = () => {
                               : ficha[field]}
                           </td>
                         ))}
+                        <td
+                          key="repuestos_colocados"
+                          onDoubleClick={() => setEditingCell({ id: ficha.id, field: "repuestos_colocados" })}
+                        >
+                          {editingCell?.id === ficha.id && editingCell.field === "repuestos_colocados"
+                            ? makeEditable(ficha.id, "repuestos_colocados", ficha.repuestos_colocados)
+                            : formatRepuestosForDisplay(ficha.repuestos_colocados)}
+                        </td>
+                        <td
+                          key="repuestos_faltantes"
+                          onDoubleClick={() => setEditingCell({ id: ficha.id, field: "repuestos_faltantes" })}
+                        >
+                          {editingCell?.id === ficha.id && editingCell.field === "repuestos_faltantes"
+                            ? makeEditable(ficha.id, "repuestos_faltantes", ficha.repuestos_faltantes)
+                            : formatRepuestosForDisplay(ficha.repuestos_faltantes)}
+                        </td>
                         <td
                           key="estado"
                           style={{
@@ -502,3 +606,4 @@ const Home = () => {
 }
 
 export default Home;
+
