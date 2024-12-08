@@ -1,3 +1,7 @@
+import './repuestos.css'
+import OrdenASC from './Images/OrdenASC.png'
+import OrdenDESC from './Images/OrdenDESC.png'
+import OrdenIDLE from './Images/OrdenIDLE.png'
 import React, { useState, useEffect } from 'react'
 import { db } from "../firebase-config"
 import { Pagination } from '@mui/material';
@@ -13,8 +17,6 @@ import {
   startAt,
   endAt,
 } from "firebase/firestore"
-import './repuestos.css'
-
 
 
 export default function Repuestos() {
@@ -30,6 +32,18 @@ export default function Repuestos() {
   const [newNumeroBIN, setNewNumeroBIN] = useState("")
   const [newPosicionBIN, setNewPosicionBIN] = useState("")
   const repuestosCollectionRef = collection(db, 'repuestos') // Referencia a la coleccion de la db
+  const [repuestos, setRepuestos] = useState([
+    {
+      codigo: "",
+      descripcion: "",
+      cantidad_disponible: 0,
+      numero_estanteria: "",
+      numero_estante: "",
+      numero_BIN: "",
+      posicion_BIN: "",
+    },
+  ]); // Inicialmente contiene una sola grilla
+
 
   const [editingCell, setEditingCell] = useState(null) // Variable que referencia a editar las celdas
 
@@ -41,8 +55,12 @@ export default function Repuestos() {
   const [currentPage, setCurrentPage] = useState(1); // Guarda la página actual
   const [totalPages, setTotalPages] = useState(1); // Guarda el total de páginas
   const [isLoading, setIsLoading] = useState(true); // Guarda el estado de carga
+  const [sortField, setSortField] = useState(null); // Campo activo para ordenar
+  const [sortDirection, setSortDirection] = useState("idle"); // Dirección actual (ascendente, descendente, idle)
 
   const [searchTerm, setSearchTerm] = useState("") // Guarda el "prompt" del query para la busqueda
+  const [searchField, setSearchField] = useState("codigo"); // Campo por defecto para la búsqueda
+
 
   const autoResize = (textarea) => {
     textarea.style.height = "auto"; // Restablecer altura
@@ -51,46 +69,87 @@ export default function Repuestos() {
 
   /*-------------------------------------- C R U D --------------------------------------*/
 
-  // Crear repuesto
-  const createRepuesto = async () => {
-    await addDoc(repuestosCollectionRef, {
-      codigo: newCodigo,
-      descripcion: newDescripcion,
-      cantidad_disponible: Number(newCantDisp),
-      numero_estanteria: newNumeroEstanteria,
-      numero_estante: newNumeroEstante,
-      numero_BIN: newNumeroBIN,
-      posicion_BIN: newPosicionBIN
-    })
-
-    setAllRepuestos((prevRepuestos) => [
-      ...prevRepuestos,
+  /*--------------- Crear repuesto ---------------*/
+  // Agregar una nueva grilla
+  const addRepuesto = () => {
+    setRepuestos((prev) => [
+      ...prev,
       {
-        id: repuestosCollectionRef.id,
-        codigo: newCodigo,
-        descripcion: newDescripcion,
-        cantidad_disponible: Number(newCantDisp),
-        numero_estanteria: newNumeroEstanteria,
-        numero_estante: newNumeroEstante,
-        numero_BIN: newNumeroBIN,
-        posicion_BIN: newPosicionBIN
+        codigo: "",
+        descripcion: "",
+        cantidad_disponible: 0,
+        numero_estanteria: "",
+        numero_estante: "",
+        numero_BIN: "",
+        posicion_BIN: "",
       },
-    ])
+    ]);
+  };
 
-    setShowNewRepuestoForm(false)
-  }
+  // Eliminar una grilla específica
+  const removeRepuesto = (index) => {
+    if (repuestos.length > 1) {
+      setRepuestos((prev) => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  // Actualizar los datos de una grilla
+  const updateRepuestoField = (index, field, value) => {
+    setRepuestos((prev) =>
+      prev.map((repuesto, i) =>
+        i === index ? { ...repuesto, [field]: value } : repuesto
+      )
+    );
+  };
+
+  // Crear todos los repuestos en Firebase
+  const createAllRepuestos = async () => {
+    try {
+      const promises = repuestos.map((repuesto) =>
+        addDoc(repuestosCollectionRef, {
+          ...repuesto,
+          cantidad_disponible: Number(repuesto.cantidad_disponible),
+        })
+      );
+      await Promise.all(promises); // Espera a que se creen todos los repuestos
+      loadAllRepuestos(); // Recarga la lista de repuestos
+      setRepuestos([
+        {
+          codigo: "",
+          descripcion: "",
+          cantidad_disponible: 0,
+          numero_estanteria: "",
+          numero_estante: "",
+          numero_BIN: "",
+          posicion_BIN: "",
+        },
+      ]); // Reinicia las grillas a una sola grilla vacía
+    } catch (error) {
+      console.error("Error al crear los repuestos:", error);
+    }
+  };
+
 
   // Actualizar repuesto
   const updateRepuesto = async (id, field, value) => {
-    const repuestoDoc = doc(db, "repuestos", id)
-    await updateDoc(repuestoDoc, { [field]: value })
+    const repuestoDoc = doc(db, "repuestos", id);
 
-    setAllRepuestos((prevRepuestos) =>
-      prevRepuestos.map((repuesto) =>
-        repuesto.id === id ? { ...repuesto, [field]: value } : repuesto
-      )
-    )
-  }
+    // Si el campo es "cantidad_disponible", convierte el valor a número
+    const updatedValue = field === "cantidad_disponible" ? Number(value) : value;
+
+    try {
+      await updateDoc(repuestoDoc, { [field]: updatedValue });
+
+      setAllRepuestos((prevRepuestos) =>
+        prevRepuestos.map((repuesto) =>
+          repuesto.id === id ? { ...repuesto, [field]: updatedValue } : repuesto
+        )
+      );
+    } catch (error) {
+      console.error("Error al actualizar el repuesto:", error);
+    }
+  };
+
 
   // Eliminar repuesto
   const deleteRepuesto = async (id) => {
@@ -130,7 +189,7 @@ export default function Repuestos() {
   /*-------------------------------------- MISCELÁNEA --------------------------------------*/
 
   // Funcion donde realiza el query para la busqueda
-  const searchRepuestosInDatabase = async (term) => {
+  const searchRepuestosInDatabase = async (term, field) => {
     if (term.trim() === "") {
       loadAllRepuestos(); // Si el término está vacío, cargar todos los repuestos
       return;
@@ -138,23 +197,61 @@ export default function Repuestos() {
     try {
       const filteredQuery = query(
         repuestosCollectionRef,
-        orderBy("codigo"),
+        orderBy(field),
         startAt(term),
         endAt(term + "\uf8ff")
       );
 
       const filteredData = await getDocs(filteredQuery);
-      setAllRepuestos(filteredData.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+      const filteredRepuestos = filteredData.docs.map((doc) => ({
+        ...doc.data(),
+        id: doc.id,
+      }));
+
+      setAllRepuestos(filteredRepuestos); // Actualizar la lista de repuestos filtrados
+      setTotalPages(Math.ceil(filteredRepuestos.length / limit)); // Actualizar total de páginas
+      setCurrentPage(1); // Reiniciar a la primera página
     } catch (error) {
       console.error("Error durante la búsqueda:", error);
     }
+  };
+
+  const toggleSort = (field) => {
+    let nextDirection = "asc"; // Por defecto, comenzar en ascendente
+
+    if (sortField === field) {
+      // Alternar dirección si el campo actual ya está seleccionado
+      nextDirection = sortDirection === "asc" ? "desc" : sortDirection === "desc" ? "idle" : "asc";
+    }
+
+    setSortField(nextDirection === "idle" ? null : field); // Limpiar campo si es idle
+    setSortDirection(nextDirection);
+
+    if (nextDirection !== "idle") {
+      // Ordenar solo si no está en estado idle
+      const sortedRepuestos = [...allRepuestos].sort((a, b) => {
+        if (a[field] < b[field]) return nextDirection === "asc" ? -1 : 1;
+        if (a[field] > b[field]) return nextDirection === "asc" ? 1 : -1;
+        return 0;
+      });
+      setAllRepuestos(sortedRepuestos);
+    }
+  };
+
+  const getRowClass = (cantidadDisponible) => {
+    if (cantidadDisponible < 10) {
+      return "low-stock"; // Menor que el stock mínimo
+    } else if (cantidadDisponible <= 20) {
+      return "near-stock"; // Cercano al stock mínimo
+    }
+    return ""; // Sin clase adicional
   };
 
   // Actualizar los registros mostrados cuando cambie la página o el límite
   useEffect(() => {
     const startIndex = (currentPage - 1) * limit;
     const endIndex = startIndex + limit;
-    setDisplayedRepuestos(allRepuestos.slice(startIndex, endIndex)); // Mostrar los registros de la página actual
+    setDisplayedRepuestos(allRepuestos.slice(startIndex, endIndex));
   }, [currentPage, limit, allRepuestos]);
 
   // Editar repuesto
@@ -164,6 +261,7 @@ export default function Repuestos() {
         rows={2}
         spellCheck="true"
         className="input"
+        style={{ width: "200px" }}
         defaultValue={initialValue}
         onBlur={(e) => {
           updateRepuesto(repuestoId, field, e.target.value)
@@ -191,12 +289,12 @@ export default function Repuestos() {
           <ul>
             <li>
               <a href="/pp/dml/repuestos" className="nav-link">
-                Buscar Componentes Electrónicos
+                Buscar componentes mecánicos
               </a>
             </li>
             <li>
               <a href="/pp/dml/home" className="nav-link">
-                Revisar Dispositivos Electrónicos por Entregar
+                Revisar máquinas por Entregar
               </a>
             </li>
           </ul>
@@ -213,19 +311,84 @@ export default function Repuestos() {
               {showNewRepuestoForm ? 'Cancelar' : 'Crear Nuevo Repuesto'}
             </button>
             {showNewRepuestoForm && (
-              <div className='new-repuesto-form'>
-                <h3>Crear nuevo repuesto</h3>
-                <div className="form-grid">
-                  <textarea spellCheck="true" className="input" rows={1} placeholder="Codigo..." onChange={(e) => setNewCodigo(e.target.value)} onInput={(e) => autoResize(e.target)} />
-                  <textarea spellCheck="true" className="input" rows={1} placeholder="Descripcion..." onChange={(e) => setNewDescripcion(e.target.value)} onInput={(e) => autoResize(e.target)} />
-                  <input spellCheck="true" className="input" type="number" placeholder="Cantidad disponible..." onChange={(e) => setNewCantDisp(e.target.value)} onInput={(e) => autoResize(e.target)} />
-                  <textarea spellCheck="true" className="input" rows={1} placeholder="Numero estanteria..." onChange={(e) => setNewNumEstanteria(e.target.value)} onInput={(e) => autoResize(e.target)} />
-                  <textarea spellCheck="true" className="input" rows={1} placeholder="Numero estante..." onChange={(e) => setNewNumeroEstante(e.target.value)} onInput={(e) => autoResize(e.target)} />
-                  <textarea spellCheck="true" className="input" rows={1} placeholder="Numero BIN..." onChange={(e) => setNewNumeroBIN(e.target.value)} onInput={(e) => autoResize(e.target)} />
-                  <textarea spellCheck="true" className="input" rows={1} placeholder="Posicion BIN..." onChange={(e) => setNewPosicionBIN(e.target.value)} onInput={(e) => autoResize(e.target)} />
-                </div>
-                <button className="button-newRepuesto" onClick={createRepuesto}>Crear Repuesto</button>
+              <div className="new-repuesto-form">
+                <h3>Crear nuevos repuestos</h3>
+                {repuestos.map((repuesto, index) => (
+                  <div key={index} style={{ marginBottom: "20px" }}>
+                    {/* Título dinámico */}
+                    <h4>{`Repuesto ${index + 1}`}</h4>
+                    <div className="form-grid">
+                      <textarea
+                        className="input"
+                        rows={1}
+                        placeholder="Codigo..."
+                        value={repuesto.codigo}
+                        onChange={(e) => updateRepuestoField(index, "codigo", e.target.value)}
+                      />
+                      <textarea
+                        className="input"
+                        rows={1}
+                        placeholder="Descripcion..."
+                        value={repuesto.descripcion}
+                        onChange={(e) => updateRepuestoField(index, "descripcion", e.target.value)}
+                      />
+                      <input
+                        className="input"
+                        type="number"
+                        placeholder="Cantidad disponible..."
+                        value={repuesto.cantidad_disponible}
+                        onChange={(e) => updateRepuestoField(index, "cantidad_disponible", e.target.value)}
+                      />
+                      <textarea
+                        className="input"
+                        rows={1}
+                        placeholder="Numero estanteria..."
+                        value={repuesto.numero_estanteria}
+                        onChange={(e) => updateRepuestoField(index, "numero_estanteria", e.target.value)}
+                      />
+                      <textarea
+                        className="input"
+                        rows={1}
+                        placeholder="Numero estante..."
+                        value={repuesto.numero_estante}
+                        onChange={(e) => updateRepuestoField(index, "numero_estante", e.target.value)}
+                      />
+                      <textarea
+                        className="input"
+                        rows={1}
+                        placeholder="Numero BIN..."
+                        value={repuesto.numero_BIN}
+                        onChange={(e) => updateRepuestoField(index, "numero_BIN", e.target.value)}
+                      />
+                      <textarea
+                        className="input"
+                        rows={1}
+                        placeholder="Posicion BIN..."
+                        value={repuesto.posicion_BIN}
+                        onChange={(e) => updateRepuestoField(index, "posicion_BIN", e.target.value)}
+                      />
+                      {/* Botón para eliminar la grilla */}
+                      {index > 0 && (
+                        <button
+                          className="button button-destructive"
+                          onClick={() => removeRepuesto(index)}
+                        >
+                          Eliminar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {/* Botón para agregar una nueva grilla */}
+                <button className="button-newRepuesto" onClick={addRepuesto}>
+                  Agregar repuesto
+                </button>
+                {/* Botón para crear todos los repuestos */}
+                <button className="button-newRepuesto" style={{marginLeft: "10px"}} onClick={createAllRepuestos}>
+                  Crear repuestos
+                </button>
               </div>
+
             )}
           </div>
         </div>
@@ -250,36 +413,63 @@ export default function Repuestos() {
               <option value={100}>100</option>
               <option value={allRepuestos.length}>Todos</option>
             </select>
-            <input
-              type="text"
-              className="input search-input"
-              placeholder="Buscar repuesto por código..."
-              value={searchTerm}
-              onChange={(e) => {
-                const term = e.target.value;
-                setSearchTerm(term);
-                searchRepuestosInDatabase(term); // Llama a la función de búsqueda
-              }}
-            />
+            <div className="search-container">
+              <select
+                value={searchField}
+                onChange={(e) => setSearchField(e.target.value)}
+                style={{
+                  border: "1px solid #d1d5db",
+                }}
+              >
+                {["codigo", "descripcion", "cantidad_disponible", "numero_estanteria", "numero_estante", "numero_BIN", "posicion_BIN"].map((field) => (
+                  <option key={field} value={field}>
+                    {field.replace("_", " ").charAt(0).toUpperCase() + field.replace("_", " ").slice(1)} {/* Capitaliza texto */}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="text"
+                className="input search-input"
+                placeholder={`Buscar por ${searchField.replace("_", " ")}`}
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  searchRepuestosInDatabase(e.target.value, searchField); // Realiza la búsqueda
+                }}
+              />
+            </div>
+
           </div>
           <div className="card-content">
             <div className="table-container">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Codigo</th>
-                    <th>Descripcion</th>
-                    <th>Cantidad disponible</th>
-                    <th>Numero estanteria</th>
-                    <th>Numero estante</th>
-                    <th>Numero BIN</th>
-                    <th>Posicion BIN</th>
+                    {["codigo", "descripcion", "cantidad_disponible", "numero_estanteria", "numero_estante", "numero_BIN", "posicion_BIN"].map((field) => {
+                      const icon =
+                        sortField === field && sortDirection === "asc" ? OrdenASC :
+                          sortField === field && sortDirection === "desc" ? OrdenDESC :
+                            OrdenIDLE; // Usar idleIcon por defecto
+                      return (
+                        <th key={field}>
+                          <div className='th-content'>
+                            <span>{field.replace("_", " ")}</span> {/* Texto alineado a la izquierda */}
+                            <img
+                              src={icon} // Imagen dinámica según estado
+                              alt={`Ordenar por ${field}`}
+                              onClick={() => toggleSort(field)}
+                            />
+                          </div>
+                        </th>
+                      );
+                    })}
                     <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {displayedRepuestos.map((repuesto) => (
-                    <tr key={repuesto.id}>
+                    <tr key={repuesto.id} className={getRowClass(repuesto.cantidad_disponible)}>
                       {["codigo", "descripcion", "cantidad_disponible", "numero_estanteria", "numero_estante", "numero_BIN", "posicion_BIN"].map((field) => (
                         <td key={field} onDoubleClick={() => setEditingCell({ id: repuesto.id, field })}>
                           {editingCell?.id === repuesto.id && editingCell.field === field

@@ -37,6 +37,7 @@ const Home = () => {
 
   const [ficha, setFicha] = useState([]); // Guarda todo el array de registros de la collection
   const fichaCollectionRef = collection(db, 'ficha'); // Variable que referencia a la collection de la db
+  const [repuestosInfo, setRepuestosInfo] = useState({});
   const [editingCell, setEditingCell] = useState(null); // Variable que referencia a editar celdas
   const [showNewFichaForm, setShowNewFichaForm] = useState(false); // Variable que referencia a mostrar la grilla para crear nueva ficha
 
@@ -134,6 +135,66 @@ const Home = () => {
   })
 
   /*-------------------------------------- MISCELÁNEA --------------------------------------*/
+
+  useEffect(() => {
+    const fetchRepuestosInfo = async () => {
+      const repuestosCollectionRef = collection(db, "repuestos");
+      const data = await getDocs(repuestosCollectionRef);
+  
+      const repuestosData = data.docs.reduce((acc, doc) => {
+        const repuesto = doc.data();
+        acc[repuesto.codigo] = repuesto; // Usa el código como clave
+        return acc;
+      }, {});
+  
+      setRepuestosInfo(repuestosData); // Actualiza el estado con los datos
+    };
+  
+    fetchRepuestosInfo();
+  }, []); // Ejecuta solo al montar el componente
+
+  const renderRepuestosFaltantes = (repuestosMap) => {
+    const repuestosData = Object.entries(repuestosMap).map(([codigo, cantidades]) => {
+      const info = repuestosInfo[codigo];
+      let warningIcon = null;
+  
+      if (info) {
+        const cantidadRestante = info.cantidad_disponible - cantidades[0];
+        const stockMinimo = 10; // Define el stock mínimo aquí o toma un valor dinámico
+  
+        if (cantidadRestante < 0) {
+          warningIcon = (
+            <span
+              className="warning-icon"
+              title="No hay suficientes repuestos disponibles"
+              style={{ color: "red" }}
+            >
+              ⚠️
+            </span>
+          );
+        } else if (cantidadRestante < stockMinimo) {
+          warningIcon = (
+            <span
+              className="warning-icon"
+              title="El stock está por debajo del mínimo"
+              style={{ color: "orange" }}
+            >
+              ⚠️
+            </span>
+          );
+        }
+      }
+  
+      return (
+        <div key={codigo} className="repuesto-row">
+          {codigo} ({cantidades[0]})
+          {warningIcon}
+        </div>
+      );
+    });
+  
+    return <div className="repuestos-list">{repuestosData}</div>;
+  };
 
   // Funcion para crear archivo Excel importando ciertos datos de la tabla
   const exportToExcel = async (fichaData) => {
@@ -268,6 +329,7 @@ const Home = () => {
       return (
         <select
           className="input-field"
+          style={{width: "100px"}}
           defaultValue={initialValue}
           onChange={(e) => {
             updateFicha(fichaId, field, e.target.value);
@@ -289,6 +351,7 @@ const Home = () => {
         spellCheck="true"
         rows={2}
         className="input-field"
+        style={{width: "200px"}}
         defaultValue={initialValue}
         onBlur={(e) => {
           updateFicha(fichaId, field, e.target.value);
@@ -618,14 +681,9 @@ const Home = () => {
                         >
                           {editingCell?.id === ficha.id && editingCell.field === "repuestos_faltantes"
                             ? makeEditable(ficha.id, "repuestos_faltantes", ficha.repuestos_faltantes)
-                            : (
-                              <div className="repuestos-list">
-                                {formatRepuestosForDisplay(ficha.repuestos_faltantes).map((repuesto, index) => (
-                                  <div key={index}>{repuesto}</div>
-                                ))}
-                              </div>
-                            )}
+                            : renderRepuestosFaltantes(ficha.repuestos_faltantes)}
                         </td>
+
                         <td
                           key="estado"
                           style={{

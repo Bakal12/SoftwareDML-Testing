@@ -203,7 +203,7 @@ body {
   border: 1px solid #c5c5c5;
   white-space: normal;
   word-wrap: break-word;
-  max-width: 200px; /* Ajusta este valor según tus necesidades */
+  max-width: 200px;
 }
 
 .table th {
@@ -260,4 +260,10 @@ body {
   flex-direction: column;
   gap: 4px; /* Espaciado entre líneas */
   padding: 5px;
+}
+
+.warning-icon {
+  margin-left: 1px;
+  font-size: 14px;
+  cursor: help;
 }
