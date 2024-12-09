@@ -1,4 +1,4 @@
-/*----------------Estilos general----------------*/
+/*--------------------------------Estilo general--------------------------------*/
 body {
   font-family: 'Inter', sans-serif;
   background-color: #f3f4f6;
@@ -9,7 +9,7 @@ body {
   min-height: 100vh;
 }
 
-/*----------------Header----------------*/
+/*--------------------------------Header--------------------------------*/
 .header {
   background-color: #ffffff;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
@@ -45,14 +45,14 @@ body {
   color: #111827;
 }
 
-/*----------------Main content----------------*/
+/*--------------------------------Main content--------------------------------*/
 .main-content {
   max-width: 80rem;
   margin: 0 auto;
   padding: 1.5rem 1rem;
 }
 
-/*----------------Card----------------*/
+/*--------------------------------Card--------------------------------*/
 .card {
   background-color: #ffffff;
   border-radius: 0.5rem;
@@ -79,7 +79,7 @@ body {
   margin-top: 20px;
 }
 
-/* ----------------Forms---------------- */
+/* --------------------------------Forms-------------------------------- */
 .form-grid {
   display: grid;
   grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -104,14 +104,17 @@ body {
   font-size: 0.875rem;
   font-weight: bold;
   color: #374151;
-  margin-bottom: 10px; /* Espaciado entre el título y la grilla */
-  margin-top: 0; /* Elimina el margen superior predeterminado */
-  text-align: left; /* Asegura que el texto esté alineado a la izquierda */
+  margin-bottom: 10px;
+  /* Espaciado entre el título y la grilla */
+  margin-top: 0;
+  /* Elimina el margen superior predeterminado */
+  text-align: left;
+  /* Asegura que el texto esté alineado a la izquierda */
 }
 
 
 
-/*----------------Buttons----------------*/
+/*--------------------------------Buttons--------------------------------*/
 .button-newRepuesto {
   padding: 0.75rem 1rem;
   margin-top: 15px;
@@ -147,6 +150,10 @@ body {
 }
 
 .button-destructive {
+  width: 100px;
+  height: 35px;
+  justify-content: center;
+  align-items: center;
   background-color: #ef4444;
 }
 
@@ -159,7 +166,7 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/*----------------Inputs----------------*/
+/*--------------------------------Inputs--------------------------------*/
 .input {
   width: 100%;
   padding: 0.5rem;
@@ -185,7 +192,7 @@ button:disabled {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-/*----------------Table----------------*/
+/*--------------------------------Table--------------------------------*/
 .table-container {
   overflow-x: auto;
 }
@@ -226,8 +233,8 @@ button:disabled {
 
 .table th img {
   margin-left: 8px;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   cursor: pointer;
 }
 
@@ -288,7 +295,7 @@ button:disabled {
   /* Asegura buena legibilidad del texto */
 }
 
-/*----------------Responsive----------------*/
+/*--------------------------------Responsive-------------------------------*/
 @media (max-width: 640px) {
   .card-content {
     padding: 1rem;
@@ -300,7 +307,7 @@ button:disabled {
   }
 }
 
-/*----------------Select----------------*/
+/*--------------------------------Miscelánea--------------------------------*/
 select {
   padding: 0.5rem;
   margin-right: 1rem;
@@ -349,4 +356,14 @@ select {
   /* Para Firefox */
   -webkit-appearance: none;
   /* Para Chrome y Safari */
+}
+
+.grid-repuestos {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #f9f9f9;
 }

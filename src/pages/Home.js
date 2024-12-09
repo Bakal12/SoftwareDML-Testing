@@ -1,5 +1,12 @@
 import "./home.css";
-import { useState, useEffect, useRef } from "react";
+import InfoICON from './Images/InfoICON.png'
+import DeleteICON from './Images/DeleteICON.png'
+import AddICON from './Images/AddICON.png'
+import ConfirmICON from './Images/ConfirmICON.png'
+import OrdenASC from './Images/OrdenASC.png'
+import OrdenDESC from './Images/OrdenDESC.png'
+import OrdenIDLE from './Images/OrdenIDLE.png'
+import { useState, useEffect } from "react";
 import { db } from "../firebase-config";
 import { query, orderBy } from "firebase/firestore";
 import {
@@ -37,9 +44,11 @@ const Home = () => {
 
   const [ficha, setFicha] = useState([]); // Guarda todo el array de registros de la collection
   const fichaCollectionRef = collection(db, 'ficha'); // Variable que referencia a la collection de la db
-  const [repuestosInfo, setRepuestosInfo] = useState({});
   const [editingCell, setEditingCell] = useState(null); // Variable que referencia a editar celdas
   const [showNewFichaForm, setShowNewFichaForm] = useState(false); // Variable que referencia a mostrar la grilla para crear nueva ficha
+  const [sortField, setSortField] = useState(null);
+  const [sortOrder, setSortOrder] = useState("asc"); // "asc" o "desc"
+
 
   /*-------------------------------------- C R U D --------------------------------------*/
 
@@ -132,69 +141,9 @@ const Home = () => {
     };
 
     getFicha();
-  })
+  }, [])
 
   /*-------------------------------------- MISCELÁNEA --------------------------------------*/
-
-  useEffect(() => {
-    const fetchRepuestosInfo = async () => {
-      const repuestosCollectionRef = collection(db, "repuestos");
-      const data = await getDocs(repuestosCollectionRef);
-  
-      const repuestosData = data.docs.reduce((acc, doc) => {
-        const repuesto = doc.data();
-        acc[repuesto.codigo] = repuesto; // Usa el código como clave
-        return acc;
-      }, {});
-  
-      setRepuestosInfo(repuestosData); // Actualiza el estado con los datos
-    };
-  
-    fetchRepuestosInfo();
-  }, []); // Ejecuta solo al montar el componente
-
-  const renderRepuestosFaltantes = (repuestosMap) => {
-    const repuestosData = Object.entries(repuestosMap).map(([codigo, cantidades]) => {
-      const info = repuestosInfo[codigo];
-      let warningIcon = null;
-  
-      if (info) {
-        const cantidadRestante = info.cantidad_disponible - cantidades[0];
-        const stockMinimo = 10; // Define el stock mínimo aquí o toma un valor dinámico
-  
-        if (cantidadRestante < 0) {
-          warningIcon = (
-            <span
-              className="warning-icon"
-              title="No hay suficientes repuestos disponibles"
-              style={{ color: "red" }}
-            >
-              ⚠️
-            </span>
-          );
-        } else if (cantidadRestante < stockMinimo) {
-          warningIcon = (
-            <span
-              className="warning-icon"
-              title="El stock está por debajo del mínimo"
-              style={{ color: "orange" }}
-            >
-              ⚠️
-            </span>
-          );
-        }
-      }
-  
-      return (
-        <div key={codigo} className="repuesto-row">
-          {codigo} ({cantidades[0]})
-          {warningIcon}
-        </div>
-      );
-    });
-  
-    return <div className="repuestos-list">{repuestosData}</div>;
-  };
 
   // Funcion para crear archivo Excel importando ciertos datos de la tabla
   const exportToExcel = async (fichaData) => {
@@ -245,7 +194,8 @@ const Home = () => {
               <input
                 type="text"
                 defaultValue={nombre}
-                className="input-field"
+                className="input-field-editable"
+                style={{ maxWidth: "70px" }}
                 placeholder="Nombre del repuesto"
                 onBlur={(e) => {
                   const newNombre = e.target.value;
@@ -260,7 +210,8 @@ const Home = () => {
               <input
                 type="number"
                 defaultValue={cantidades[0]}
-                className="input-field"
+                className="input-field-editable"
+                style={{ maxWidth: "40px" }}
                 placeholder="Cantidad"
                 onBlur={(e) => {
                   const newCantidad = Number(e.target.value);
@@ -270,32 +221,34 @@ const Home = () => {
                 }}
               />
               <button
-                className="button button-delete"
+                className="button-delete"
                 onClick={() => {
                   const newRepuestos = { ...repuestosMap };
                   delete newRepuestos[nombre];
                   updateFicha(fichaId, field, newRepuestos);
                 }}
               >
-                Eliminar
+                <img src={DeleteICON} alt="Agregar" className="button-icon" />
               </button>
             </div>
           ))}
           <div className="add-repuesto">
             <input
               type="text"
-              className="input-field"
+              className="input-field-editable"
+              style={{ maxWidth: "70px" }}
               placeholder="Nuevo repuesto"
               id={`new-repuesto-${field}`}
             />
             <input
               type="number"
-              className="input-field"
+              className="input-field-editable"
+              style={{ maxWidth: "40px" }}
               placeholder="Cantidad"
               id={`new-cantidad-${field}`}
             />
             <button
-              className="button button-add"
+              className="button-add"
               onClick={() => {
                 const nombre = document.getElementById(`new-repuesto-${field}`).value;
                 const cantidad = Number(document.getElementById(`new-cantidad-${field}`).value);
@@ -311,7 +264,15 @@ const Home = () => {
                 }
               }}
             >
-              Agregar
+              <img src={AddICON} alt="Agregar" className="button-icon" />
+            </button>
+          </div>
+          <div className="close-menu">
+            <button
+              className="button-close"
+              onClick={() => setEditingCell(null)}
+            >
+              <img src={ConfirmICON} alt="Cerrar" className="button-icon" />
             </button>
           </div>
         </div>
@@ -329,7 +290,7 @@ const Home = () => {
       return (
         <select
           className="input-field"
-          style={{width: "100px"}}
+          style={{ width: "100px" }}
           defaultValue={initialValue}
           onChange={(e) => {
             updateFicha(fichaId, field, e.target.value);
@@ -351,7 +312,7 @@ const Home = () => {
         spellCheck="true"
         rows={2}
         className="input-field"
-        style={{width: "200px"}}
+        style={{ width: "200px" }}
         defaultValue={initialValue}
         onBlur={(e) => {
           updateFicha(fichaId, field, e.target.value);
@@ -387,6 +348,21 @@ const Home = () => {
     return repuestosMap;
   };
 
+  const sortData = (field) => {
+    const order = sortField === field && sortOrder === "asc" ? "desc" : "asc"; // Alternar orden
+    setSortField(field);
+    setSortOrder(order);
+
+    const sortedFicha = [...ficha].sort((a, b) => {
+      if (a[field] < b[field]) return order === "asc" ? -1 : 1;
+      if (a[field] > b[field]) return order === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    setFicha(sortedFicha); // Actualizar el estado con los datos ordenados
+  };
+
+
   const formatRepuestosForDisplay = (repuestosMap) => {
     return Object.entries(repuestosMap).map(
       ([nombre, cantidades]) => `${nombre} (${cantidades.join(", ")})`
@@ -401,12 +377,12 @@ const Home = () => {
           <ul className="nav-list">
             <li>
               <a href="/pp/dml/repuestos" className="nav-link">
-                Buscar Componentes Electrónicos
+                Buscar componentes mecánicos
               </a>
             </li>
             <li>
               <a href="/pp/dml/home" className="nav-link">
-                Revisar Dispositivos Electrónicos por Entregar
+                Revisar máquinas por entregar
               </a>
             </li>
           </ul>
@@ -558,7 +534,10 @@ const Home = () => {
                       onInput={(e) => autoResize(e.target)}
                     ></textarea>
                     <div className="info-icon-container">
-                      <span className="info-icon">ℹ️</span>
+                      <img
+                        className="info-icon"
+                        src={InfoICON}
+                      />
                       <div className="tooltip">
                         Respeta la nomenclatura: "nombre_del_repuesto (cantidad)", separando cada
                         repuesto por una nueva línea (Enter del teclado).
@@ -578,7 +557,10 @@ const Home = () => {
                       onInput={(e) => autoResize(e.target)}
                     ></textarea>
                     <div className="info-icon-container">
-                      <span className="info-icon">ℹ️</span>
+                      <img
+                        className="info-icon"
+                        src={InfoICON}
+                      />
                       <div className="tooltip">
                         Respeta la nomenclatura: "nombre_del_repuesto (cantidad)", separando cada
                         repuesto por una nueva línea (Enter del teclado).
@@ -626,21 +608,41 @@ const Home = () => {
               <table className="table">
                 <thead>
                   <tr>
-                    <th># Ítem</th>
-                    <th># Ficha</th>
-                    <th>Cliente</th>
-                    <th>Nº Serie</th>
-                    <th>Modelo</th>
-                    <th>Nº Bat</th>
-                    <th>Nº Cargador</th>
-                    <th>Diagnóstico ingreso</th>
-                    <th>Tipo</th>
-                    <th>Observaciones</th>
-                    <th>Reparación</th>
-                    <th>Nº Ciclos</th>
-                    <th>Repuestos Colocados</th>
-                    <th>Repuestos Faltantes</th>
-                    <th>Estado</th>
+                    {[
+                      { field: "item", label: "# Ítem" },
+                      { field: "numero_ficha", label: "# Ficha" },
+                      { field: "cliente", label: "Cliente" },
+                      { field: "serie", label: "Nº Serie" },
+                      { field: "modelo", label: "Modelo" },
+                      { field: "nº_bat", label: "Nº Bat" },
+                      { field: "nº_cargador", label: "Nº Cargador" },
+                      { field: "diagnostico", label: "Diagnóstico Ingreso" },
+                      { field: "tipo", label: "Tipo" },
+                      { field: "observaciones", label: "Observaciones" },
+                      { field: "reparacion", label: "Reparación" },
+                      { field: "nº_ciclos", label: "Nº Ciclos" },
+                      { field: "repuestos_faltantes", label: "Repuestos Faltantes" },
+                      { field: "repuestos_colocados", label: "Repuestos Colocados" },
+                      { field: "estado", label: "Estado" },
+                    ].map(({ field, label }) => {
+                      const icon =
+                        sortField === field && sortOrder === "asc" ? OrdenASC :
+                          sortField === field && sortOrder === "desc" ? OrdenDESC :
+                            OrdenIDLE; // Usar idleIcon por defecto
+                      return (
+                        <th key={field}>
+                          <div className="th-content">
+                            {label}
+                            <img
+                              src={icon}
+                              // alt={`Ordenar por ${label}`}
+                              className="sort-icon"
+                              onClick={() => sortData(field)}
+                            />
+                          </div>
+                        </th>
+                      )
+                    })}
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -681,7 +683,13 @@ const Home = () => {
                         >
                           {editingCell?.id === ficha.id && editingCell.field === "repuestos_faltantes"
                             ? makeEditable(ficha.id, "repuestos_faltantes", ficha.repuestos_faltantes)
-                            : renderRepuestosFaltantes(ficha.repuestos_faltantes)}
+                            : (
+                              <div className="repuestos-list">
+                                {formatRepuestosForDisplay(ficha.repuestos_faltantes).map((repuesto, index) => (
+                                  <div key={index}>{repuesto}</div>
+                                ))}
+                              </div>
+                            )}
                         </td>
 
                         <td

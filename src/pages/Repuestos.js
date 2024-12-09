@@ -294,7 +294,7 @@ export default function Repuestos() {
             </li>
             <li>
               <a href="/pp/dml/home" className="nav-link">
-                Revisar máquinas por Entregar
+                Revisar máquinas por entregar
               </a>
             </li>
           </ul>
@@ -314,7 +314,7 @@ export default function Repuestos() {
               <div className="new-repuesto-form">
                 <h3>Crear nuevos repuestos</h3>
                 {repuestos.map((repuesto, index) => (
-                  <div key={index} style={{ marginBottom: "20px" }}>
+                  <div key={index} style={{ marginTop: "30px", marginBottom: "10px" }}>
                     {/* Título dinámico */}
                     <h4>{`Repuesto ${index + 1}`}</h4>
                     <div className="form-grid">
